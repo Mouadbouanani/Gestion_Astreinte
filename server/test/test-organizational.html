@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Gestion Structure Organisationnelle OCP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: #117a8b;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: black;
+        }
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-inline {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-inline .form-group {
+            flex: 1;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Test - Gestion Structure Organisationnelle OCP</h1>
+        
+        <!-- Sites Management -->
+        <div class="section">
+            <h2>🏭 Gestion des Sites</h2>
+            <div class="button-group">
+                <button class="btn-primary" onclick="getSitesHierarchy()">📊 Hiérarchie Complète</button>
+                <button class="btn-info" onclick="getSitesList()">📋 Liste Sites</button>
+                <button class="btn-success" onclick="showCreateSiteForm()">➕ Créer Site</button>
+            </div>
+            
+            <div id="createSiteForm" style="display: none;">
+                <h3>Créer un nouveau site</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Nom du site:</label>
+                        <input type="text" id="siteName" placeholder="ex: Benguerir">
+                    </div>
+                    <div class="form-group">
+                        <label>Code (3-4 lettres):</label>
+                        <input type="text" id="siteCode" placeholder="ex: BEN" maxlength="4">
+                    </div>
+                    <div class="form-group">
+                        <label>Adresse:</label>
+                        <input type="text" id="siteAddress" placeholder="Adresse complète">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-success" onclick="createSite()">Créer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="sitesResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Secteurs Management -->
+        <div class="section">
+            <h2>🔧 Gestion des Secteurs</h2>
+            <div class="button-group">
+                <button class="btn-primary" onclick="showSecteursBySite()">📋 Secteurs par Site</button>
+                <button class="btn-success" onclick="showCreateSecteurForm()">➕ Créer Secteur</button>
+            </div>
+            
+            <div id="secteursBySiteForm" style="display: none;">
+                <div class="form-group">
+                    <label>Sélectionner un site:</label>
+                    <select id="siteSelect">
+                        <option value="">Chargement...</option>
+                    </select>
+                    <button class="btn-info" onclick="getSecteursBySite()">Voir Secteurs</button>
+                </div>
+            </div>
+            
+            <div id="createSecteurForm" style="display: none;">
+                <h3>Créer un nouveau secteur</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Site:</label>
+                        <select id="secteurSiteSelect">
+                            <option value="">Chargement...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom du secteur:</label>
+                        <select id="secteurName">
+                            <option value="">Sélectionner...</option>
+                            <option value="Traitement">Traitement</option>
+                            <option value="Extraction">Extraction</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Logistique">Logistique</option>
+                            <option value="Qualité">Qualité</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Code (optionnel):</label>
+                        <input type="text" id="secteurCode" placeholder="Auto-généré si vide">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-success" onclick="createSecteur()">Créer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="secteursResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Services Management -->
+        <div class="section">
+            <h2>👥 Gestion des Services</h2>
+            <div class="button-group">
+                <button class="btn-primary" onclick="showServicesBySecteur()">📋 Services par Secteur</button>
+                <button class="btn-success" onclick="showCreateServiceForm()">➕ Créer Service</button>
+            </div>
+            
+            <div id="servicesBySecteurForm" style="display: none;">
+                <div class="form-group">
+                    <label>Sélectionner un secteur:</label>
+                    <select id="secteurSelect">
+                        <option value="">Chargement...</option>
+                    </select>
+                    <button class="btn-info" onclick="getServicesBySecteur()">Voir Services</button>
+                </div>
+            </div>
+            
+            <div id="createServiceForm" style="display: none;">
+                <h3>Créer un nouveau service</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Secteur:</label>
+                        <select id="serviceSecteurSelect">
+                            <option value="">Chargement...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom du service:</label>
+                        <select id="serviceName">
+                            <option value="">Sélectionner...</option>
+                            <optgroup label="Traitement">
+                                <option value="Production U1">Production U1</option>
+                                <option value="Production U2">Production U2</option>
+                                <option value="Contrôle Qualité">Contrôle Qualité</option>
+                            </optgroup>
+                            <optgroup label="Extraction">
+                                <option value="Mines">Mines</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Géologie">Géologie</option>
+                            </optgroup>
+                            <optgroup label="Maintenance">
+                                <option value="Électricité">Électricité</option>
+                                <option value="Mécanique">Mécanique</option>
+                                <option value="Instrumentation">Instrumentation</option>
+                            </optgroup>
+                            <optgroup label="Logistique">
+                                <option value="Approvisionnement">Approvisionnement</option>
+                                <option value="Expédition">Expédition</option>
+                            </optgroup>
+                            <optgroup label="Qualité">
+                                <option value="Laboratoire">Laboratoire</option>
+                                <option value="Contrôle Process">Contrôle Process</option>
+                                <option value="Certification">Certification</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Code (optionnel):</label>
+                        <input type="text" id="serviceCode" placeholder="Auto-généré si vide">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-success" onclick="createService()">Créer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="servicesResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="section">
+            <h2>📊 Tableau de Bord</h2>
+            <button class="btn-warning" onclick="loadDashboard()">🔄 Actualiser Statistiques</button>
+            <div id="dashboardStats" class="stats"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050/api/org';
+        
+        // Utility functions
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { data, isError: !response.ok };
+            } catch (error) {
+                return { data: { error: error.message }, isError: true };
+            }
+        }
+        
+        // Sites functions
+        async function getSitesHierarchy() {
+            const { data, isError } = await apiCall('/sites/hierarchy');
+            showResult('sitesResult', data, isError);
+        }
+        
+        async function getSitesList() {
+            const { data, isError } = await apiCall('/sites');
+            showResult('sitesResult', data, isError);
+            
+            if (!isError && data.data) {
+                populateSelect('siteSelect', data.data);
+                populateSelect('secteurSiteSelect', data.data);
+            }
+        }
+        
+        function showCreateSiteForm() {
+            const form = document.getElementById('createSiteForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        async function createSite() {
+            const name = document.getElementById('siteName').value;
+            const code = document.getElementById('siteCode').value;
+            const address = document.getElementById('siteAddress').value;
+            
+            if (!name || !code || !address) {
+                alert('Tous les champs sont requis');
+                return;
+            }
+            
+            const { data, isError } = await apiCall('/sites', {
+                method: 'POST',
+                body: JSON.stringify({ name, code, address })
+            });
+            
+            showResult('sitesResult', data, isError);
+            
+            if (!isError) {
+                document.getElementById('siteName').value = '';
+                document.getElementById('siteCode').value = '';
+                document.getElementById('siteAddress').value = '';
+                getSitesList(); // Refresh lists
+            }
+        }
+        
+        // Secteurs functions
+        function showSecteursBySite() {
+            const form = document.getElementById('secteursBySiteForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                getSitesList();
+            }
+        }
+        
+        async function getSecteursBySite() {
+            const siteId = document.getElementById('siteSelect').value;
+            if (!siteId) {
+                alert('Veuillez sélectionner un site');
+                return;
+            }
+            
+            const { data, isError } = await apiCall(`/sites/${siteId}/secteurs`);
+            showResult('secteursResult', data, isError);
+        }
+        
+        function showCreateSecteurForm() {
+            const form = document.getElementById('createSecteurForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                getSitesList();
+            }
+        }
+        
+        async function createSecteur() {
+            const siteId = document.getElementById('secteurSiteSelect').value;
+            const name = document.getElementById('secteurName').value;
+            const code = document.getElementById('secteurCode').value;
+            
+            if (!siteId || !name) {
+                alert('Site et nom du secteur sont requis');
+                return;
+            }
+            
+            const { data, isError } = await apiCall(`/sites/${siteId}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({ name, code })
+            });
+            
+            showResult('secteursResult', data, isError);
+            
+            if (!isError) {
+                document.getElementById('secteurName').value = '';
+                document.getElementById('secteurCode').value = '';
+                loadSecteurs(); // Refresh secteurs list
+            }
+        }
+        
+        // Services functions
+        function showServicesBySecteur() {
+            const form = document.getElementById('servicesBySecteurForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                loadSecteurs();
+            }
+        }
+        
+        async function getServicesBySecteur() {
+            const secteurId = document.getElementById('secteurSelect').value;
+            if (!secteurId) {
+                alert('Veuillez sélectionner un secteur');
+                return;
+            }
+            
+            const { data, isError } = await apiCall(`/secteurs/${secteurId}/services`);
+            showResult('servicesResult', data, isError);
+        }
+        
+        function showCreateServiceForm() {
+            const form = document.getElementById('createServiceForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                loadSecteurs();
+            }
+        }
+        
+        async function createService() {
+            const secteurId = document.getElementById('serviceSecteurSelect').value;
+            const name = document.getElementById('serviceName').value;
+            const code = document.getElementById('serviceCode').value;
+            
+            if (!secteurId || !name) {
+                alert('Secteur et nom du service sont requis');
+                return;
+            }
+            
+            const { data, isError } = await apiCall(`/secteurs/${secteurId}/services`, {
+                method: 'POST',
+                body: JSON.stringify({ name, code })
+            });
+            
+            showResult('servicesResult', data, isError);
+            
+            if (!isError) {
+                document.getElementById('serviceName').value = '';
+                document.getElementById('serviceCode').value = '';
+            }
+        }
+        
+        // Helper functions
+        function populateSelect(selectId, items) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Sélectionner...</option>';
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} (${item.code})`;
+                select.appendChild(option);
+            });
+        }
+        
+        async function loadSecteurs() {
+            const { data } = await apiCall('/sites/hierarchy');
+            if (data.success && data.data) {
+                const secteurs = [];
+                data.data.forEach(site => {
+                    site.secteurs.forEach(secteur => {
+                        secteurs.push({
+                            id: secteur.id,
+                            name: `${secteur.name} (${site.name})`,
+                            code: secteur.code
+                        });
+                    });
+                });
+                populateSelect('secteurSelect', secteurs);
+                populateSelect('serviceSecteurSelect', secteurs);
+            }
+        }
+        
+        async function loadDashboard() {
+            const { data, isError } = await apiCall('/sites/hierarchy');
+            
+            if (!isError && data.success) {
+                const stats = data.summary;
+                const dashboard = document.getElementById('dashboardStats');
+                
+                dashboard.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.totalSites}</div>
+                        <div class="stat-label">Sites OCP</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.totalSecteurs}</div>
+                        <div class="stat-label">Secteurs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.totalServices}</div>
+                        <div class="stat-label">Services</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.totalUsers}</div>
+                        <div class="stat-label">Utilisateurs</div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            getSitesList();
+            loadDashboard();
+        });
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            getSitesList();
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>
