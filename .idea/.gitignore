@@ -15,4 +15,11 @@
 /.idea/inspectionProfiles/
 /.idea/datasources/
 /.server/node_modules/
-/.server/dist/Server.js
+
+
+# Node.js
+server/node_modules/
+frontend/node_modules/
+# Dist / build output
+server/dist/
+server/dist/Server.js
