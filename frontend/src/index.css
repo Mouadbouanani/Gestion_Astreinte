@@ -1,3 +1,159 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Boutons OCP */
+  .btn-ocp {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn-ocp bg-ocp-primary text-white hover:bg-blue-700 focus:ring-ocp-primary shadow-ocp;
+  }
+
+  .btn-secondary {
+    @apply btn-ocp bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+  }
+
+  .btn-success {
+    @apply btn-ocp bg-ocp-success text-white hover:bg-green-600 focus:ring-ocp-success;
+  }
+
+  .btn-warning {
+    @apply btn-ocp bg-ocp-warning text-white hover:bg-yellow-600 focus:ring-ocp-warning;
+  }
+
+  .btn-error {
+    @apply btn-ocp bg-ocp-error text-white hover:bg-red-600 focus:ring-ocp-error;
+  }
+
+  /* Cards OCP */
+  .card-ocp {
+    @apply bg-white rounded-xl shadow-ocp border border-gray-200 overflow-hidden;
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-gray-200 bg-gray-50;
+  }
+
+  .card-body {
+    @apply px-6 py-4;
+  }
+
+  .card-footer {
+    @apply px-6 py-4 border-t border-gray-200 bg-gray-50;
+  }
+
+  /* Inputs OCP */
+  .input-ocp {
+    @apply block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-ocp-primary focus:outline-none focus:ring-1 focus:ring-ocp-primary transition-colors;
+  }
+
+  .input-error {
+    @apply border-ocp-error focus:border-ocp-error focus:ring-ocp-error;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200;
+  }
+
+  .nav-link-active {
+    @apply nav-link bg-ocp-primary text-white;
+  }
+
+  .nav-link-inactive {
+    @apply nav-link text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+  }
+
+  /* Badges de rôle */
+  .badge-admin {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800;
+  }
+
+  .badge-chef-secteur {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-chef-service {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
+  }
+
+  .badge-ingenieur {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800;
+  }
+
+  .badge-collaborateur {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  /* Styles pour le planning */
+  .planning-day {
+    @apply min-h-32 p-2 border-r border-b bg-white;
+  }
+
+  .planning-day.today {
+    @apply bg-ocp-primary/5;
+  }
+
+  .planning-assignment {
+    @apply text-xs p-1 rounded mb-1;
+  }
+
+  .planning-assignment.ingenieur {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .planning-assignment.collaborateur {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .planning-header {
+    @apply p-2 text-center text-sm font-medium text-gray-500 border-b;
+  }
+
+  /* Styles pour les liens de navigation */
+  .nav-link {
+    @apply flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200;
+  }
+
+  .nav-link-active {
+    @apply bg-ocp-primary text-white shadow-sm;
+  }
+
+  .nav-link-inactive {
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+  }
+}
