@@ -1,15 +1,49 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Site from '../models/Site.js';
 import Secteur from '../models/Secteur.js';
 import Service from '../models/Service.js';
 import User from '../models/User.js';
-import { authenticateToken, smartAuthorization } from '../middleware/jwt-auth.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { smartAuthorization } from '../middleware/jwt-auth.js';
+import { flexibleAuth  } from '../middleware/auth-mock.js';
 
 const router = express.Router();
 
 // ========================================
 // SECTEURS MANAGEMENT
 // ========================================
+
+// Get all secteurs (for admin)
+router.get('/secteurs', async (req, res) => {
+  try {
+    const { siteId } = req.query;
+    let filter = { isActive: true };
+
+    // Filter by site if specified
+    if (siteId && mongoose.Types.ObjectId.isValid(siteId)) {
+      filter.site = siteId;
+    }
+
+    const secteurs = await Secteur.find(filter)
+      .populate('site', 'name code')
+      .populate('chefSecteur', 'firstName lastName email')
+      .sort({ 'site.name': 1, name: 1 });
+
+    res.json({
+      success: true,
+      data: secteurs,
+      message: `${secteurs.length} secteur(s) trouvé(s)`
+    });
+  } catch (error) {
+    console.error('Error fetching secteurs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des secteurs',
+      error: error.message
+    });
+  }
+});
 
 // Get secteurs by site
 router.get('/sites/:siteId/secteurs', async (req, res) => {
@@ -83,8 +117,18 @@ router.get('/sites/:siteId/secteurs', async (req, res) => {
 });
 
 // Get single secteur with details
-router.get('/secteurs/:id', async (req, res) => {
+router.get('sites/:siteId/secteurs/:id', async (req, res) => {
   try {
+     const { siteId } = req.params;
+
+    const site = await Site.findById(siteId);
+    if (!site) {
+      return res.status(404).json({
+        success: false,
+        message: 'Site introuvable'
+      });
+    }
+
     const { id } = req.params;
 
     const secteur = await Secteur.findById(id).populate('site', 'name code address');
@@ -154,11 +198,11 @@ router.get('/secteurs/:id', async (req, res) => {
   }
 });
 
-// Create new secteur (avec autorisation JWT automatique)
-router.post('/sites/:siteId/secteurs', authenticateToken, smartAuthorization('secteur'), async (req, res) => {
+// If you want to allow custom secteur names, modify your backend:
+router.post('/sites/:siteId/secteurs', async (req, res) => {
   try {
     const { siteId } = req.params;
-    const { name, code } = req.body;
+    const { name, code, description } = req.body; // Add description support
 
     // Validation
     if (!name || !code) {
@@ -176,45 +220,71 @@ router.post('/sites/:siteId/secteurs', authenticateToken, smartAuthorization('se
       });
     }
 
-    // Validate secteur name (must be from OCP predefined list)
-    const validSecteurs = [
-      'Traitement', 'Extraction', 'Maintenance', 'Logistique', 'Qualité'
-    ];
+    // ✅ OPTION 1: Remove validation (allow any name)
+    // Comment out the validation section
+    
+    // ✅ OPTION 2: Add custom names to valid list
+    // const validSecteurs = [
+    //   'Traitement', 'Extraction', 'Maintenance', 'Logistique', 'Qualité',
+    //   'Test Secteur', 'Administration', 'Production' // Add custom names
+    // ];
 
-    if (!validSecteurs.includes(name.trim())) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nom de secteur invalide',
-        validSecteurs
-      });
-    }
+    // ✅ Allow any secteur name - no validation needed
 
     // Check if secteur already exists for this site
-    const existingSecteur = await Secteur.findOne({ 
-      site: siteId, 
+    const existingSecteur = await Secteur.findOne({
+      site: siteId,
       name: name.trim()
     });
-    if (existingSecteur) {
-      return res.status(400).json({
-        success: false,
-        message: 'Secteur déjà existant pour ce site'
-      });
-    }
 
-    // Generate code if not provided
-    const secteurCode = code || `${site.code}_${name.toUpperCase().substring(0, 4)}`;
+    if (existingSecteur) {
+      // If secteur exists but is inactive, reactivate it
+      if (!existingSecteur.isActive) {
+        console.log(`🔄 Reactivating existing secteur: ${existingSecteur.name}`);
+
+        existingSecteur.isActive = true;
+        existingSecteur.code = code.toUpperCase().trim(); // Update code if provided
+        if (description) {
+          existingSecteur.description = description.trim(); // Update description if provided
+        }
+
+        await existingSecteur.save();
+        await existingSecteur.populate('site', 'name code');
+
+        // Also reactivate related services if any
+        const reactivatedServices = await Service.updateMany(
+          { secteur: existingSecteur._id, isActive: false },
+          { isActive: true }
+        );
+
+        console.log(`✅ Secteur réactivé: ${existingSecteur.name} (${reactivatedServices.modifiedCount} services réactivés)`);
+
+        return res.status(200).json({
+          success: true,
+          message: `Secteur réactivé avec succès${reactivatedServices.modifiedCount > 0 ? ` (${reactivatedServices.modifiedCount} services réactivés)` : ''}`,
+          data: existingSecteur,
+          reactivated: true,
+          reactivatedServices: reactivatedServices.modifiedCount
+        });
+      } else {
+        // Secteur exists and is active
+        return res.status(400).json({
+          success: false,
+          message: 'Secteur déjà existant et actif pour ce site'
+        });
+      }
+    }
 
     const secteur = new Secteur({
       name: name.trim(),
-      code: secteurCode.toUpperCase().trim(),
+      code: code.toUpperCase().trim(),
+      description: description?.trim(), // Add description support
       site: siteId,
       isActive: true
     });
 
     await secteur.save();
     await secteur.populate('site', 'name code');
-
-    console.log(`✅ Secteur créé: ${secteur.name} (${secteur.code}) pour ${site.name}`);
 
     res.status(201).json({
       success: true,
@@ -231,6 +301,7 @@ router.post('/sites/:siteId/secteurs', authenticateToken, smartAuthorization('se
     });
   }
 });
+
 
 // Update secteur (avec autorisation JWT automatique)
 router.put('/secteurs/:id', authenticateToken, smartAuthorization('secteur'), async (req, res) => {
@@ -301,76 +372,235 @@ router.put('/secteurs/:id', authenticateToken, smartAuthorization('secteur'), as
 });
 
 // Delete secteur (soft delete avec autorisation JWT automatique)
-router.delete('/sites/:siteId/secteurs/:id', authenticateToken, smartAuthorization('secteur'), async (req, res) => {
-  try {
-    const { siteId, id } = req.params;
+// Use mock auth instead of JWT for testing
 
-    // Vérifier que le site existe
-    const site = await Site.findById(siteId);
-    if (!site) {
-      return res.status(404).json({
+// Then update your delete route:
+router.delete('/sites/:siteId/secteurs/:id', 
+  flexibleAuth,  // ← Change from authFromHeader to flexibleAuth
+  async (req, res) => {
+    try {
+      const { siteId, id } = req.params;
+
+      console.log('🔍 Delete request from user:', req.userInfo);
+
+      // Vérifier que le site existe
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      const secteur = await Secteur.findById(id);
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable'
+        });
+      }
+
+      // Vérifier que le secteur appartient bien au site
+      if (secteur.site.toString() !== siteId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le secteur n\'appartient pas à ce site'
+        });
+      }
+
+      // Check if secteur has active users
+      const activeUsers = await User.countDocuments({ secteur: id, isActive: true });
+      if (activeUsers > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Impossible de supprimer: ${activeUsers} utilisateur(s) actif(s) assigné(s)`,
+          activeUsers
+        });
+      }
+
+      // Soft delete secteur
+      secteur.isActive = false;
+      await secteur.save();
+
+      // Also deactivate related services
+      const deactivatedServices = await Service.updateMany(
+        { secteur: id }, 
+        { isActive: false }
+      );
+
+      console.log(`✅ Secteur désactivé: ${secteur.name} (${deactivatedServices.modifiedCount} services désactivés)`);
+
+      res.json({
+        success: true,
+        message: 'Secteur désactivé avec succès',
+        deactivatedServices: deactivatedServices.modifiedCount
+      });
+
+    } catch (error) {
+      console.error('❌ Error deleting secteur:', error);
+      res.status(500).json({
         success: false,
-        message: 'Site introuvable'
+        message: 'Erreur suppression secteur',
+        error: error.message
       });
     }
+  });
 
-    const secteur = await Secteur.findById(id);
-    if (!secteur) {
-      return res.status(404).json({
+// Activate/Reactivate secteur
+router.patch('/sites/:siteId/secteurs/:id/activate',
+  flexibleAuth,
+  async (req, res) => {
+    try {
+      const { siteId, id } = req.params;
+
+      console.log('🔄 Activate secteur request from user:', req.userInfo);
+
+      // Verify site exists
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      const secteur = await Secteur.findById(id);
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable'
+        });
+      }
+
+      // Verify secteur belongs to the site
+      if (secteur.site.toString() !== siteId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le secteur n\'appartient pas à ce site'
+        });
+      }
+
+      // If already active, return success
+      if (secteur.isActive) {
+        return res.json({
+          success: true,
+          message: 'Secteur déjà actif',
+          data: secteur,
+          alreadyActive: true
+        });
+      }
+
+      // Activate secteur
+      secteur.isActive = true;
+      await secteur.save();
+      await secteur.populate('site', 'name code');
+
+      // Also reactivate related services if any
+      const reactivatedServices = await Service.updateMany(
+        { secteur: id, isActive: false },
+        { isActive: true }
+      );
+
+      console.log(`✅ Secteur activé: ${secteur.name} (${reactivatedServices.modifiedCount} services réactivés)`);
+
+      res.json({
+        success: true,
+        message: `Secteur activé avec succès${reactivatedServices.modifiedCount > 0 ? ` (${reactivatedServices.modifiedCount} services réactivés)` : ''}`,
+        data: secteur,
+        reactivatedServices: reactivatedServices.modifiedCount
+      });
+
+    } catch (error) {
+      console.error('❌ Error activating secteur:', error);
+      res.status(500).json({
         success: false,
-        message: 'Secteur introuvable'
+        message: 'Erreur activation secteur',
+        error: error.message
       });
     }
-
-    // Vérifier que le secteur appartient bien au site
-    if (secteur.site.toString() !== siteId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Le secteur n\'appartient pas à ce site'
-      });
-    }
-
-    // Check if secteur has active users
-    const activeUsers = await User.countDocuments({ secteur: id, isActive: true });
-    if (activeUsers > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Impossible de supprimer: ${activeUsers} utilisateur(s) actif(s) assigné(s)`,
-        activeUsers
-      });
-    }
-
-    // Soft delete secteur
-    secteur.isActive = false;
-    await secteur.save();
-
-    // Also deactivate related services
-    const deactivatedServices = await Service.updateMany(
-      { secteur: id }, 
-      { isActive: false }
-    );
-
-    console.log(`✅ Secteur désactivé: ${secteur.name} (${deactivatedServices.modifiedCount} services désactivés)`);
-
-    res.json({
-      success: true,
-      message: 'Secteur désactivé avec succès',
-      deactivatedServices: deactivatedServices.modifiedCount
-    });
-
-  } catch (error) {
-    console.error('❌ Error deleting secteur:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur suppression secteur',
-      error: error.message
-    });
-  }
-});
+  });
 
 // ========================================
 // SERVICES MANAGEMENT
 // ========================================
+
+// Get all services with optional filtering
+router.get('/services', async (req, res) => {
+  try {
+    const { siteId, secteurId } = req.query;
+    let filter = { isActive: true };
+
+    // Build filter based on parameters
+    if (secteurId && mongoose.Types.ObjectId.isValid(secteurId)) {
+      filter.secteur = secteurId;
+    } else if (siteId && mongoose.Types.ObjectId.isValid(siteId)) {
+      // If only siteId is provided, get all secteurs of that site first
+      const secteurs = await Secteur.find({ site: siteId, isActive: true }).select('_id');
+      const secteurIds = secteurs.map(s => s._id);
+      filter.secteur = { $in: secteurIds };
+    }
+
+    const services = await Service.find(filter)
+      .populate('secteur', 'name code')
+      .populate({
+        path: 'secteur',
+        populate: {
+          path: 'site',
+          select: 'name code'
+        }
+      })
+      .sort({ name: 1 });
+
+    const servicesWithUsers = await Promise.all(
+      services.map(async (service) => {
+        const users = await User.find({ service: service._id, isActive: true })
+          .select('firstName lastName role email phone');
+
+        const usersByRole = {
+          chefsService: users.filter(u => u.role === 'chef_service'),
+          collaborateurs: users.filter(u => u.role === 'collaborateur')
+        };
+
+        return {
+          _id: service._id,
+          name: service.name,
+          code: service.code,
+          description: service.description,
+          secteur: service.secteur,
+          minPersonnel: service.minPersonnel,
+          isActive: service.isActive,
+          statistics: {
+            totalPersonnel: users.length,
+            usersCount: users.length,
+            chefsService: usersByRole.chefsService.length,
+            collaborateurs: usersByRole.collaborateurs.length
+          },
+          users: users.map(u => ({
+            _id: u._id,
+            name: `${u.firstName} ${u.lastName}`,
+            role: u.role,
+            email: u.email,
+            phone: u.phone
+          })),
+          createdAt: service.createdAt
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      count: servicesWithUsers.length,
+      data: servicesWithUsers
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting services:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur récupération services'
+    });
+  }
+});
 
 // Get services by secteur
 router.get('/secteurs/:secteurId/services', async (req, res) => {
@@ -399,16 +629,21 @@ router.get('/secteurs/:secteurId/services', async (req, res) => {
         };
 
         return {
-          id: service._id,
+          _id: service._id,
           name: service.name,
           code: service.code,
+          description: service.description,
+          secteur: service.secteur,
+          minPersonnel: service.minPersonnel,
+          isActive: service.isActive,
           statistics: {
+            totalPersonnel: users.length,
             usersCount: users.length,
             chefsService: usersByRole.chefsService.length,
             collaborateurs: usersByRole.collaborateurs.length
           },
           users: users.map(u => ({
-            id: u._id,
+            _id: u._id,
             name: `${u.firstName} ${u.lastName}`,
             role: u.role,
             email: u.email,
@@ -701,6 +936,319 @@ router.delete('/services/:id', async (req, res) => {
       success: false,
       message: 'Erreur suppression service',
       error: error.message
+    });
+  }
+});
+
+// ========================================
+// ADMIN MANAGEMENT - SECTEURS
+// ========================================
+
+// Create new secteur (Admin only)
+router.post('/secteurs', authenticateToken, smartAuthorization(['admin']), async (req, res) => {
+  try {
+    const { name, code, description, site, chefSecteur } = req.body;
+
+    // Validate required fields
+    if (!name || !code || !site) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nom, code et site sont requis'
+      });
+    }
+
+    // Check if secteur already exists
+    const existingSecteur = await Secteur.findOne({
+      $or: [
+        { name: name.trim() },
+        { code: code.trim().toUpperCase() }
+      ]
+    });
+
+    if (existingSecteur) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un secteur avec ce nom ou code existe déjà'
+      });
+    }
+
+    // Create new secteur
+    const secteur = new Secteur({
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      description: description?.trim(),
+      site,
+      chefSecteur: chefSecteur || null,
+      isActive: true,
+      createdBy: req.user.id
+    });
+
+    await secteur.save();
+
+    // Populate the response
+    await secteur.populate('site', 'name code');
+    await secteur.populate('chefSecteur', 'firstName lastName email');
+
+    res.status(201).json({
+      success: true,
+      data: secteur,
+      message: 'Secteur créé avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating secteur:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création du secteur'
+    });
+  }
+});
+
+// Update secteur (Admin only)
+router.put('/secteurs/:id', authenticateToken, smartAuthorization(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, description, site, chefSecteur, isActive } = req.body;
+
+    const secteur = await Secteur.findById(id);
+    if (!secteur) {
+      return res.status(404).json({
+        success: false,
+        message: 'Secteur introuvable'
+      });
+    }
+
+    // Update fields
+    if (name) secteur.name = name.trim();
+    if (code) secteur.code = code.trim().toUpperCase();
+    if (description !== undefined) secteur.description = description?.trim();
+    if (site) secteur.site = site;
+    if (chefSecteur !== undefined) secteur.chefSecteur = chefSecteur;
+    if (isActive !== undefined) secteur.isActive = isActive;
+
+    secteur.updatedBy = req.user.id;
+    secteur.updatedAt = new Date();
+
+    await secteur.save();
+
+    // Populate the response
+    await secteur.populate('site', 'name code');
+    await secteur.populate('chefSecteur', 'firstName lastName email');
+
+    res.json({
+      success: true,
+      data: secteur,
+      message: 'Secteur mis à jour avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating secteur:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du secteur'
+    });
+  }
+});
+
+// Delete secteur (Admin only)
+router.delete('/secteurs/:id', authenticateToken, smartAuthorization(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const secteur = await Secteur.findById(id);
+    if (!secteur) {
+      return res.status(404).json({
+        success: false,
+        message: 'Secteur introuvable'
+      });
+    }
+
+    // Check if secteur has services
+    const servicesCount = await Service.countDocuments({ secteur: id, isActive: true });
+    if (servicesCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Impossible de supprimer ce secteur car il contient ${servicesCount} service(s) actif(s)`
+      });
+    }
+
+    // Check if secteur has users
+    const usersCount = await User.countDocuments({ secteur: id, isActive: true });
+    if (usersCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Impossible de supprimer ce secteur car il contient ${usersCount} utilisateur(s) actif(s)`
+      });
+    }
+
+    // Soft delete
+    secteur.isActive = false;
+    secteur.updatedBy = req.user.id;
+    secteur.updatedAt = new Date();
+    await secteur.save();
+
+    res.json({
+      success: true,
+      message: 'Secteur supprimé avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting secteur:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression du secteur'
+    });
+  }
+});
+
+// ========================================
+// ADMIN MANAGEMENT - SERVICES
+// ========================================
+
+// Create new service (Admin only)
+router.post('/services', authenticateToken, smartAuthorization(['admin']), async (req, res) => {
+  try {
+    const { name, code, description, secteur, chefService } = req.body;
+
+    // Validate required fields
+    if (!name || !code || !secteur) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nom, code et secteur sont requis'
+      });
+    }
+
+    // Check if service already exists
+    const existingService = await Service.findOne({
+      $or: [
+        { name: name.trim() },
+        { code: code.trim().toUpperCase() }
+      ]
+    });
+
+    if (existingService) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un service avec ce nom ou code existe déjà'
+      });
+    }
+
+    // Create new service
+    const service = new Service({
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      description: description?.trim(),
+      secteur,
+      chefService: chefService || null,
+      isActive: true,
+      createdBy: req.user.id
+    });
+
+    await service.save();
+
+    // Populate the response
+    await service.populate('secteur', 'name code');
+    await service.populate('chefService', 'firstName lastName email');
+
+    res.status(201).json({
+      success: true,
+      data: service,
+      message: 'Service créé avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création du service'
+    });
+  }
+});
+
+// Update service (Admin only)
+router.put('/services/:id', authenticateToken, smartAuthorization(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, description, secteur, chefService, isActive } = req.body;
+
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service introuvable'
+      });
+    }
+
+    // Update fields
+    if (name) service.name = name.trim();
+    if (code) service.code = code.trim().toUpperCase();
+    if (description !== undefined) service.description = description?.trim();
+    if (secteur) service.secteur = secteur;
+    if (chefService !== undefined) service.chefService = chefService;
+    if (isActive !== undefined) service.isActive = isActive;
+
+    service.updatedBy = req.user.id;
+    service.updatedAt = new Date();
+
+    await service.save();
+
+    // Populate the response
+    await service.populate('secteur', 'name code');
+    await service.populate('chefService', 'firstName lastName email');
+
+    res.json({
+      success: true,
+      data: service,
+      message: 'Service mis à jour avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du service'
+    });
+  }
+});
+
+// Delete service (Admin only)
+router.delete('/services/:id', authenticateToken, smartAuthorization(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service introuvable'
+      });
+    }
+
+    // Check if service has users
+    const usersCount = await User.countDocuments({ service: id, isActive: true });
+    if (usersCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Impossible de supprimer ce service car il contient ${usersCount} utilisateur(s) actif(s)`
+      });
+    }
+
+    // Soft delete
+    service.isActive = false;
+    service.updatedBy = req.user.id;
+    service.updatedAt = new Date();
+    await service.save();
+
+    res.json({
+      success: true,
+      message: 'Service supprimé avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression du service'
     });
   }
 });

@@ -83,6 +83,15 @@ const Sidebar: React.FC = () => {
         roles: ['admin'],
       },
       {
+        name: 'Utilisateurs',
+        href: '/users',
+        icon: UserGroupIcon,
+        roles: ['admin'],
+      },
+    ];
+
+    const secteurItems = [
+      {
         name: 'Secteurs',
         href: '/secteurs',
         icon: BuildingOfficeIcon,
@@ -92,12 +101,6 @@ const Sidebar: React.FC = () => {
         name: 'Services',
         href: '/services',
         icon: WrenchScrewdriverIcon,
-        roles: ['admin'],
-      },
-      {
-        name: 'Utilisateurs',
-        href: '/users',
-        icon: UserGroupIcon,
         roles: ['admin'],
       },
     ];
@@ -110,15 +113,21 @@ const Sidebar: React.FC = () => {
         roles: ['chef_secteur'],
       },
       {
-        name: 'Mes Services',
-        href: '/mes-services',
-        icon: WrenchScrewdriverIcon,
+        name: 'Mes Ingénieurs',
+        href: '/mes-ingenieurs',
+        icon: UserGroupIcon,
         roles: ['chef_secteur'],
       },
       {
         name: 'Mon Service',
         href: '/mon-service',
         icon: WrenchScrewdriverIcon,
+        roles: ['chef_service'],
+      },
+      {
+        name: 'Mon Équipe',
+        href: '/mon-equipe',
+        icon: UserGroupIcon,
         roles: ['chef_service'],
       },
     ];
@@ -165,6 +174,7 @@ const Sidebar: React.FC = () => {
     return [
       ...baseItems,
       ...adminItems,
+      ...secteurItems,
       ...managementItems,
       ...planningItems,
       ...reportItems,

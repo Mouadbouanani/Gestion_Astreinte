@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { generateToken, authenticateToken } from '../middleware/jwt-auth.js';
 
@@ -194,27 +195,141 @@ router.get('/me', authenticateToken, async (req, res) => {
  * POST /api/auth-jwt/refresh
  * Rafraîchir le token JWT
  */
-router.post('/refresh', authenticateToken, async (req, res) => {
+router.post('/refresh', async (req, res) => {
   try {
-    const user = req.user;
-
-    // Générer un nouveau token
-    const newToken = generateToken(user);
-
-    res.json({
-      success: true,
-      message: 'Token rafraîchi',
-      data: {
-        token: newToken,
-        expiresIn: '24h'
+    console.log('🔄 Refresh token request received');
+    
+    // Get the current token from Authorization header
+    const authHeader = req.headers['authorization'];
+    const currentToken = authHeader && authHeader.split(' ')[1];
+    
+    if (!currentToken) {
+      console.log('❌ No current token provided for refresh');
+      return res.status(401).json({
+        success: false,
+        message: 'Token actuel requis pour le rafraîchissement',
+        code: 'NO_CURRENT_TOKEN'
+      });
+    }
+    
+    console.log('🔄 Attempting to verify current token for refresh...');
+    
+    try {
+      // Try to verify the current token (even if expired, we'll still get the payload)
+      const decoded = jwt.decode(currentToken);
+      
+      if (!decoded || !decoded.id) {
+        console.log('❌ Invalid token structure for refresh');
+        return res.status(401).json({
+          success: false,
+          message: 'Token invalide',
+          code: 'INVALID_TOKEN_STRUCTURE'
+        });
       }
-    });
+      
+      console.log('🔄 Token decoded for refresh:', {
+        userId: decoded.id,
+        email: decoded.email,
+        role: decoded.role,
+        exp: new Date(decoded.exp * 1000).toISOString()
+      });
+      
+      // Get the user from database
+      const user = await User.findById(decoded.id)
+        .populate('site', 'name code')
+        .populate('secteur', 'name code site')
+        .populate('service', 'name code secteur');
+      
+      if (!user || !user.isActive) {
+        console.log('❌ User not found or inactive for refresh');
+        return res.status(401).json({
+          success: false,
+          message: 'Utilisateur introuvable ou inactif',
+          code: 'USER_NOT_FOUND'
+        });
+      }
+      
+      // Generate new token
+      const newToken = generateToken(user);
+      
+      console.log('✅ New token generated for refresh:', {
+        userId: user._id,
+        email: user.email,
+        role: user.role
+      });
+      
+      res.json({
+        success: true,
+        message: 'Token rafraîchi',
+        data: {
+          token: newToken,
+          user: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            site: user.site,
+            secteur: user.secteur,
+            service: user.service
+          },
+          expiresIn: '24h'
+        }
+      });
+      
+    } catch (verifyError) {
+      console.log('❌ Token verification failed for refresh:', verifyError.message);
+      
+      // If token is expired, we can still try to refresh if we can decode it
+      if (verifyError.name === 'TokenExpiredError') {
+        console.log('🔄 Token expired, attempting refresh with decoded payload...');
+        
+        const decoded = jwt.decode(currentToken);
+        if (decoded && decoded.id) {
+          const user = await User.findById(decoded.id);
+          if (user && user.isActive) {
+            const newToken = generateToken(user);
+            
+            console.log('✅ Token refreshed despite expiration');
+            
+            res.json({
+              success: true,
+              message: 'Token rafraîchi',
+              data: {
+                token: newToken,
+                user: {
+                  id: user._id,
+                  email: user.email,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  role: user.role,
+                  site: user.site,
+                  secteur: user.secteur,
+                  service: user.service
+                },
+                expiresIn: '24h'
+              }
+            });
+            return;
+          }
+        }
+      }
+      
+      return res.status(401).json({
+        success: false,
+        message: 'Token invalide pour le rafraîchissement',
+        code: 'INVALID_TOKEN_FOR_REFRESH',
+        error: verifyError.message
+      });
+    }
 
   } catch (error) {
-    console.error('Erreur refresh token:', error);
+    console.error('❌ Erreur refresh token:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors du rafraîchissement'
+      message: 'Erreur serveur lors du rafraîchissement',
+      code: 'REFRESH_ERROR',
+      error: error.message
     });
   }
 });

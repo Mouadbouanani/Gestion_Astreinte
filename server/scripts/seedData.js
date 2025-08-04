@@ -4,6 +4,8 @@ import Site from '../models/Site.js';
 import Secteur from '../models/Secteur.js';
 import Service from '../models/Service.js';
 import User from '../models/User.js';
+import Planning from '../models/Planning.js';
+import Indisponibilite from '../models/Indisponibilite.js';
 
 // Configuration des variables d'environnement
 dotenv.config({ path: './config.env' });
@@ -14,49 +16,89 @@ const sitesData = [
     name: 'Casablanca',
     code: 'CAS',
     address: 'Zone Industrielle Ain Sebaa, Casablanca, Maroc',
-    coordinates: { latitude: 33.5731, longitude: -7.5898 }
+    coordinates: { latitude: 33.5731, longitude: -7.5898 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 15, niveau2ToNiveau3: 30 },
+      notifications: { smsEnabled: true, emailEnabled: true, pushEnabled: true },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 1 }
+    }
   },
   {
     name: 'Jorf Lasfar',
     code: 'JLF',
     address: 'Complexe Chimique Jorf Lasfar, El Jadida, Maroc',
-    coordinates: { latitude: 33.1056, longitude: -8.6333 }
+    coordinates: { latitude: 33.1056, longitude: -8.6333 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 20, niveau2ToNiveau3: 45 },
+      notifications: { smsEnabled: true, emailEnabled: true, pushEnabled: true },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 2 }
+    }
   },
   {
     name: 'Khouribga',
     code: 'KHO',
     address: 'Site Minier de Khouribga, Khouribga, Maroc',
-    coordinates: { latitude: 32.8811, longitude: -6.9063 }
+    coordinates: { latitude: 32.8811, longitude: -6.9063 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 10, niveau2ToNiveau3: 25 },
+      notifications: { smsEnabled: true, emailEnabled: true, pushEnabled: false },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 2 }
+    }
   },
   {
     name: 'Boucraâ',
     code: 'BOU',
     address: 'Site Minier de Boucraâ, Laâyoune, Maroc',
-    coordinates: { latitude: 26.1333, longitude: -14.5167 }
+    coordinates: { latitude: 26.1333, longitude: -14.5167 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 25, niveau2ToNiveau3: 60 },
+      notifications: { smsEnabled: true, emailEnabled: false, pushEnabled: false },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 1 }
+    }
   },
   {
     name: 'Youssoufia',
     code: 'YOU',
     address: 'Site Minier de Youssoufia, Youssoufia, Maroc',
-    coordinates: { latitude: 32.2547, longitude: -8.5286 }
+    coordinates: { latitude: 32.2547, longitude: -8.5286 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 15, niveau2ToNiveau3: 35 },
+      notifications: { smsEnabled: true, emailEnabled: true, pushEnabled: true },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 1 }
+    }
   },
   {
     name: 'Safi',
     code: 'SAF',
     address: 'Complexe Chimique de Safi, Safi, Maroc',
-    coordinates: { latitude: 32.2994, longitude: -9.2372 }
+    coordinates: { latitude: 32.2994, longitude: -9.2372 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 20, niveau2ToNiveau3: 40 },
+      notifications: { smsEnabled: true, emailEnabled: true, pushEnabled: true },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 2 }
+    }
   },
   {
     name: 'Benguerir',
     code: 'BEN',
     address: 'Site Minier de Benguerir, Benguerir, Maroc',
-    coordinates: { latitude: 32.2361, longitude: -7.9528 }
+    coordinates: { latitude: 32.2361, longitude: -7.9528 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 15, niveau2ToNiveau3: 30 },
+      notifications: { smsEnabled: true, emailEnabled: true, pushEnabled: true },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 1 }
+    }
   },
   {
     name: 'Laâyoune',
     code: 'LAA',
     address: 'Site de Laâyoune, Laâyoune, Maroc',
-    coordinates: { latitude: 27.1536, longitude: -13.2033 }
+    coordinates: { latitude: 27.1536, longitude: -13.2033 },
+    configuration: {
+      escaladeTimeouts: { niveau1ToNiveau2: 30, niveau2ToNiveau3: 90 },
+      notifications: { smsEnabled: true, emailEnabled: false, pushEnabled: false },
+      planning: { generateInAdvance: 30, minPersonnelPerService: 1 }
+    }
   }
 ];
 
@@ -97,6 +139,20 @@ const servicesData = {
   ]
 };
 
+// Noms réalistes pour les utilisateurs
+const realNames = {
+  firstNames: [
+    'Ahmed', 'Mohamed', 'Fatima', 'Amina', 'Hassan', 'Karim', 'Sara', 'Nadia',
+    'Youssef', 'Rachid', 'Leila', 'Samira', 'Omar', 'Ali', 'Zineb', 'Khadija',
+    'Mustapha', 'Abdelkader', 'Malika', 'Hakima', 'Tarik', 'Adil', 'Naima', 'Hayat'
+  ],
+  lastNames: [
+    'Alami', 'Bennani', 'Tazi', 'Amrani', 'Benali', 'Chraibi', 'El Fassi', 'Hassani',
+    'Idrissi', 'Jabri', 'Khalil', 'Lahbabi', 'Mansouri', 'Naciri', 'Ouazzani', 'Poujol',
+    'Qasmi', 'Rachidi', 'Saadi', 'Tahiri', 'Ummi', 'Vidal', 'Wahbi', 'Zahri'
+  ]
+};
+
 // Fonction pour se connecter à la base de données
 const connectDB = async () => {
   try {
@@ -112,6 +168,8 @@ const connectDB = async () => {
 // Fonction pour nettoyer la base de données
 const cleanDatabase = async () => {
   try {
+    await Indisponibilite.deleteMany({});
+    await Planning.deleteMany({});
     await User.deleteMany({});
     await Service.deleteMany({});
     await Secteur.deleteMany({});
@@ -193,6 +251,13 @@ const createServices = async (secteurs) => {
   }
 };
 
+// Fonction pour générer un nom aléatoire
+const getRandomName = () => {
+  const firstName = realNames.firstNames[Math.floor(Math.random() * realNames.firstNames.length)];
+  const lastName = realNames.lastNames[Math.floor(Math.random() * realNames.lastNames.length)];
+  return { firstName, lastName };
+};
+
 // Fonction pour créer l'administrateur
 const createAdmin = async (sites) => {
   try {
@@ -220,19 +285,23 @@ const createAdmin = async (sites) => {
 const createTestUsers = async (sites, secteurs, services) => {
   try {
     const users = [];
+    const engineersBySecteur = new Map(); // Pour tracker les ingénieurs par secteur
     
     // Créer un chef de secteur pour chaque secteur
     for (const secteur of secteurs) {
       const site = sites.find(s => s._id.toString() === secteur.site.toString());
+      const { firstName, lastName } = getRandomName();
+      
       const user = new User({
-        firstName: 'Chef',
-        lastName: `Secteur ${secteur.name}`,
+        firstName,
+        lastName,
         email: `chef.${secteur.code.toLowerCase()}@ocp.ma`,
         phone: `+21266${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
         password: 'Chef123!',
         role: 'chef_secteur',
         site: site._id,
         secteur: secteur._id,
+        address: `${site.name}, Maroc`,
         isActive: true
       });
       users.push(user);
@@ -247,9 +316,10 @@ const createTestUsers = async (sites, secteurs, services) => {
       const site = sites.find(s => s._id.toString() === secteur.site.toString());
       
       // Chef de service
+      const { firstName: chefFirstName, lastName: chefLastName } = getRandomName();
       const chefService = new User({
-        firstName: 'Chef',
-        lastName: `Service ${service.name}`,
+        firstName: chefFirstName,
+        lastName: chefLastName,
         email: `chef.${service.code.toLowerCase()}@ocp.ma`,
         phone: `+21266${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
         password: 'Chef123!',
@@ -257,6 +327,7 @@ const createTestUsers = async (sites, secteurs, services) => {
         site: site._id,
         secteur: secteur._id,
         service: service._id,
+        address: `${site.name}, Maroc`,
         isActive: true
       });
       users.push(chefService);
@@ -264,12 +335,13 @@ const createTestUsers = async (sites, secteurs, services) => {
       // Mettre à jour le service avec le chef
       service.chefService = chefService._id;
       
-      // Collaborateurs (2-3 par service)
-      const nbCollaborateurs = Math.floor(Math.random() * 2) + 2; // 2 ou 3
+      // Collaborateurs (2-4 par service selon minPersonnel)
+      const nbCollaborateurs = Math.max(service.minPersonnel, Math.floor(Math.random() * 3) + 2);
       for (let i = 1; i <= nbCollaborateurs; i++) {
+        const { firstName, lastName } = getRandomName();
         const collaborateur = new User({
-          firstName: `Collaborateur${i}`,
-          lastName: service.name,
+          firstName,
+          lastName,
           email: `collab${i}.${service.code.toLowerCase()}@ocp.ma`,
           phone: `+21266${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
           password: 'Collab123!',
@@ -277,26 +349,30 @@ const createTestUsers = async (sites, secteurs, services) => {
           site: site._id,
           secteur: secteur._id,
           service: service._id,
+          address: `${site.name}, Maroc`,
           isActive: true
         });
         users.push(collaborateur);
         service.collaborateurs.push(collaborateur._id);
       }
       
-      // Ingénieur responsable (1 par secteur)
-      if (services.indexOf(service) % 3 === 0) { // Un ingénieur pour 3 services
+      // Ingénieur responsable (1 par secteur, pas par service)
+      if (!engineersBySecteur.has(secteur._id.toString())) {
+        const { firstName, lastName } = getRandomName();
         const ingenieur = new User({
-          firstName: 'Ingénieur',
-          lastName: `Responsable ${secteur.name}`,
+          firstName,
+          lastName,
           email: `ing.${secteur.code.toLowerCase()}@ocp.ma`,
           phone: `+21266${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
           password: 'Ing123!',
           role: 'ingenieur',
           site: site._id,
           secteur: secteur._id,
+          address: `${site.name}, Maroc`,
           isActive: true
         });
         users.push(ingenieur);
+        engineersBySecteur.set(secteur._id.toString(), ingenieur._id);
       }
     }
     
@@ -315,34 +391,185 @@ const createTestUsers = async (sites, secteurs, services) => {
   }
 };
 
+// Fonction pour créer des indisponibilités de test
+const createTestIndisponibilites = async (users) => {
+  try {
+    const indisponibilites = [];
+    const today = new Date();
+    
+    // Créer quelques indisponibilités pour différents utilisateurs
+    const testUsers = users.filter(u => ['collaborateur', 'ingenieur'].includes(u.role));
+    
+    for (let i = 0; i < Math.min(10, testUsers.length); i++) {
+      const user = testUsers[i];
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() + Math.floor(Math.random() * 30) + 1); // Dans les 30 prochains jours
+      
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + Math.floor(Math.random() * 3) + 1); // 1-3 jours
+      
+      const indisponibilite = new Indisponibilite({
+        utilisateur: user._id,
+        motif: ['conge_annuel', 'conge_maladie', 'formation', 'mission', 'urgence_familiale'][Math.floor(Math.random() * 5)],
+        dateDebut: startDate,
+        dateFin: endDate,
+        description: `Demande de test pour ${user.firstName} ${user.lastName}`,
+        statut: ['en_attente', 'approuve', 'refuse'][Math.floor(Math.random() * 3)],
+        priorite: ['normale', 'urgente'][Math.floor(Math.random() * 2)],
+        approbation: {
+          approuvePar: user.role === 'collaborateur' ? 
+            users.find(u => u.role === 'chef_service' && u.service === user.service)?._id :
+            users.find(u => u.role === 'chef_secteur' && u.secteur === user.secteur)?._id,
+          niveauApprobation: user.role === 'collaborateur' ? 'chef_service' : 'chef_secteur'
+        }
+      });
+      
+      indisponibilites.push(indisponibilite);
+    }
+    
+    if (indisponibilites.length > 0) {
+      await Indisponibilite.insertMany(indisponibilites);
+      console.log(` ${indisponibilites.length} indisponibilités de test créées`);
+    }
+    
+    return indisponibilites;
+  } catch (error) {
+    console.error(' Erreur création indisponibilités:', error);
+    throw error;
+  }
+};
+
+// Fonction pour créer des plannings de test
+const createTestPlannings = async (sites, secteurs, services, users) => {
+  try {
+    const plannings = [];
+    const today = new Date();
+    
+    // Créer des plannings pour les 4 prochaines semaines
+    for (let week = 0; week < 4; week++) {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() + (week * 7));
+      
+      // Planning par service (Niveau 1)
+      for (const service of services) {
+        const serviceUsers = users.filter(u => 
+          u.service && u.service.toString() === service._id.toString() &&
+          ['collaborateur', 'chef_service'].includes(u.role)
+        );
+        
+        if (serviceUsers.length > 0) {
+          const planning = new Planning({
+            type: 'service',
+            periode: {
+              debut: new Date(weekStart),
+              fin: new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000) // +6 jours
+            },
+            site: service.secteur.site,
+            secteur: service.secteur,
+            service: service._id,
+            gardes: [], // Sera rempli par l'algorithme de rotation
+            statut: 'brouillon',
+            createdBy: users.find(u => u.role === 'chef_service' && u.service === service._id)?._id
+          });
+          
+          plannings.push(planning);
+        }
+      }
+      
+      // Planning par secteur (Niveau 2) - seulement pour les ingénieurs
+      for (const secteur of secteurs) {
+        const secteurEngineers = users.filter(u => 
+          u.secteur && u.secteur.toString() === secteur._id.toString() &&
+          u.role === 'ingenieur'
+        );
+        
+        if (secteurEngineers.length > 0) {
+          const planning = new Planning({
+            type: 'secteur',
+            periode: {
+              debut: new Date(weekStart),
+              fin: new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000) // +6 jours
+            },
+            site: secteur.site,
+            secteur: secteur._id,
+            gardes: [], // Sera rempli par l'algorithme de rotation
+            statut: 'brouillon',
+            createdBy: users.find(u => u.role === 'chef_secteur' && u.secteur === secteur._id)?._id
+          });
+          
+          plannings.push(planning);
+        }
+      }
+    }
+    
+    if (plannings.length > 0) {
+      await Planning.insertMany(plannings);
+      console.log(` ${plannings.length} plannings de test créés`);
+    }
+    
+    return plannings;
+  } catch (error) {
+    console.error(' Erreur création plannings:', error);
+    throw error;
+  }
+};
+
 // Fonction principale de seeding
 const seedDatabase = async () => {
   try {
-    console.log(' Début du seeding de la base de données...');
+    console.log('🚀 Début du seeding de la base de données...');
     
     await connectDB();
+    console.log('✅ Connexion à la base de données réussie');
+    
     await cleanDatabase();
+    console.log('🧹 Base de données nettoyée');
     
+    console.log('🏗️ Création des sites...');
     const sites = await createSites();
+    console.log(`✅ ${sites.length} sites créés`);
+    
+    console.log('🏢 Création des secteurs...');
     const secteurs = await createSecteurs(sites);
+    console.log(`✅ ${secteurs.length} secteurs créés`);
+    
+    console.log('⚙️ Création des services...');
     const services = await createServices(secteurs);
+    console.log(`✅ ${services.length} services créés`);
     
+    console.log('👤 Création de l\'administrateur...');
     await createAdmin(sites);
-    await createTestUsers(sites, secteurs, services);
+    console.log('✅ Administrateur créé');
     
-    console.log(' Seeding terminé avec succès!');
-    console.log('\n Comptes de test créés:');
-    console.log(' Admin: admin@ocp.ma / Admin123!');
-    console.log(' Chefs de secteur: chef.[secteur]@ocp.ma / Chef123!');
-    console.log(' Chefs de service: chef.[service]@ocp.ma / Chef123!');
-    console.log(' Collaborateurs: collab[n].[service]@ocp.ma / Collab123!');
-    console.log(' Ingénieurs: ing.[secteur]@ocp.ma / Ing123!');
+    console.log('👥 Création des utilisateurs de test...');
+    const users = await createTestUsers(sites, secteurs, services);
+    console.log(`✅ ${users.length} utilisateurs créés`);
+    
+    console.log('🚫 Création des indisponibilités de test...');
+    await createTestIndisponibilites(users);
+    console.log('✅ Indisponibilités de test créées');
+    
+    console.log('📅 Création des plannings de test...');
+    await createTestPlannings(sites, secteurs, services, users);
+    console.log('✅ Plannings de test créés');
+    
+    console.log('\n🎉 Seeding terminé avec succès!');
+    console.log('\n📋 Comptes de test créés:');
+    console.log('  Admin: admin@ocp.ma / Admin123!');
+    console.log('  Chefs de secteur: chef.[secteur]@ocp.ma / Chef123!');
+    console.log('  Chefs de service: chef.[service]@ocp.ma / Chef123!');
+    console.log('  Collaborateurs: collab[n].[service]@ocp.ma / Collab123!');
+    console.log('  Ingénieurs: ing.[secteur]@ocp.ma / Ing123!');
+    console.log('\n📊 Données de test créées:');
+    console.log('  - Indisponibilités de test');
+    console.log('  - Plannings de test (4 semaines)');
     
   } catch (error) {
-    console.error(' Erreur lors du seeding:', error);
+    console.error('❌ Erreur lors du seeding:', error);
+    console.error('Stack trace:', error.stack);
   } finally {
     await mongoose.disconnect();
-    console.log(' Connexion fermée');
+    console.log('🔌 Connexion fermée');
     process.exit(0);
   }
 };

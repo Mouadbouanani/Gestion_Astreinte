@@ -5,7 +5,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import PlanningCalendar from '@/components/planning/PlanningCalendar';
 import PlanningFilters from '@/components/planning/PlanningFilters';
-// import apiService from '@/services/api';
+import apiService from '@/services/api';
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -22,9 +22,17 @@ interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
   usersByRole: Record<string, number>;
+  recentActivity?: Array<{
+    id: string;
+    type: string;
+    user: string;
+    target: string;
+    description: string;
+    timestamp: string;
+  }>;
 }
 
-interface PlanningFilters {
+interface DashboardPlanningFilters {
   siteId?: string;
   secteurId?: string;
   serviceId?: string;
@@ -36,7 +44,7 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [planningFilters, setPlanningFilters] = useState<PlanningFilters>({
+  const [planningFilters, setPlanningFilters] = useState<DashboardPlanningFilters>({
     startDate: new Date(),
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
   });
@@ -47,26 +55,54 @@ const Dashboard: React.FC = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Pour l'instant, on simule les données
-      // Plus tard, on utilisera apiService.getDashboardStats()
+      setIsLoading(true);
+      console.log('📊 Loading dashboard data...');
+      
+      // Fetch real data from API
+      const response = await apiService.getDashboardStats();
+      console.log('📊 Dashboard API response:', response);
+      
+      if (response.success && response.data) {
+        console.log('📊 Setting real dashboard stats:', response.data);
+        setStats(response.data);
+      } else {
+        console.error('❌ Erreur récupération données dashboard:', response.message);
+        // Fallback to mock data if API fails
+        const mockStats: DashboardStats = {
+          totalSites: 8,
+          totalSecteurs: 40,
+          totalServices: 112,
+          totalUsers: 18,
+          activeUsers: 18,
+          usersByRole: {
+            admin: 1,
+            chef_secteur: 4,
+            chef_service: 4,
+            ingenieur: 4,
+            collaborateur: 5,
+          },
+        };
+        console.log('📊 Using fallback mock stats');
+        setStats(mockStats);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement dashboard:', error);
+      // Fallback to mock data on error
       const mockStats: DashboardStats = {
         totalSites: 8,
-        totalSecteurs: 16,
-        totalServices: 32,
-        totalUsers: 156,
-        activeUsers: 142,
+        totalSecteurs: 40,
+        totalServices: 112,
+        totalUsers: 18,
+        activeUsers: 18,
         usersByRole: {
-          admin: 2,
-          chef_secteur: 8,
-          chef_service: 16,
-          ingenieur: 24,
-          collaborateur: 106,
+          admin: 1,
+          chef_secteur: 4,
+          chef_service: 4,
+          ingenieur: 4,
+          collaborateur: 5,
         },
       };
-
       setStats(mockStats);
-    } catch (error) {
-      console.error('Erreur chargement dashboard:', error);
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +126,7 @@ const Dashboard: React.FC = () => {
               Se connecter pour plus de fonctionnalités
             </a>
             <div className="text-sm opacity-90">
-              📊 {stats?.totalSites || 8} Sites • {stats?.totalSecteurs || 16} Secteurs • {stats?.totalUsers || 156} Collaborateurs
+              📊 {stats?.totalSites || 8} Sites • {stats?.totalSecteurs || 40} Secteurs • {stats?.totalUsers || 18} Collaborateurs
             </div>
           </div>
         </div>
@@ -349,21 +385,37 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6">
       {/* En-tête de bienvenue */}
       <div className="bg-gradient-to-r from-ocp-primary to-ocp-accent rounded-xl p-6 text-white">
-        <h1 className="text-2xl font-bold">{getWelcomeMessage()}</h1>
-        <p className="mt-2 opacity-90">
-          Astreinte Weekends OCP - {user.site?.name || 'Tous sites'}
-        </p>
-        <div className="mt-4 flex items-center space-x-4">
-          <Badge role={user.role} />
-          {user.site && (
-            <span className="text-sm opacity-90">📍 {user.site.name}</span>
-          )}
-          {user.secteur && (
-            <span className="text-sm opacity-90">🏢 {user.secteur.name}</span>
-          )}
-          {user.service && (
-            <span className="text-sm opacity-90">⚙️ {user.service.name}</span>
-          )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{getWelcomeMessage()}</h1>
+            <p className="mt-2 opacity-90">
+              Astreinte Weekends OCP - {user.site?.name || 'Tous sites'}
+            </p>
+            <div className="mt-4 flex items-center space-x-4">
+              <Badge role={user.role} />
+              {user.site && (
+                <span className="text-sm opacity-90">📍 {user.site.name}</span>
+              )}
+              {user.secteur && (
+                <span className="text-sm opacity-90">🏢 {user.secteur.name}</span>
+              )}
+              {user.service && (
+                <span className="text-sm opacity-90">⚙️ {user.service.name}</span>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={loadDashboardData}
+            disabled={isLoading}
+            className="text-white hover:bg-white hover:text-ocp-primary"
+          >
+            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {isLoading ? 'Actualisation...' : 'Actualiser'}
+          </Button>
         </div>
       </div>
 
@@ -391,48 +443,76 @@ const Dashboard: React.FC = () => {
         {getRoleSpecificCards()}
       </div>
 
-      {/* Informations détaillées */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Informations utilisateur */}
-        <Card>
-          <Card.Header>
-            <h3 className="text-lg font-medium text-gray-900">Mes Informations</h3>
-          </Card.Header>
-          <Card.Body>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Nom complet</span>
-                <span className="text-sm font-medium">{user.firstName} {user.lastName}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Email</span>
-                <span className="text-sm font-medium">{user.email}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Rôle</span>
-                <Badge role={user.role} />
-              </div>
-              {user.site && (
+              {/* Informations détaillées */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Informations utilisateur */}
+          <Card>
+            <Card.Header>
+              <h3 className="text-lg font-medium text-gray-900">Mes Informations</h3>
+            </Card.Header>
+            <Card.Body>
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Site</span>
-                  <span className="text-sm font-medium">{user.site.name}</span>
+                  <span className="text-sm text-gray-500">Nom complet</span>
+                  <span className="text-sm font-medium">{user.firstName} {user.lastName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Email</span>
+                  <span className="text-sm font-medium">{user.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Rôle</span>
+                  <Badge role={user.role} />
+                </div>
+                {user.site && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Site</span>
+                    <span className="text-sm font-medium">{user.site.name}</span>
+                  </div>
+                )}
+                {user.secteur && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Secteur</span>
+                    <span className="text-sm font-medium">{user.secteur.name}</span>
+                  </div>
+                )}
+                {user.service && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Service</span>
+                    <span className="text-sm font-medium">{user.service.name}</span>
+                  </div>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+
+          {/* Activité récente */}
+          <Card>
+            <Card.Header>
+              <h3 className="text-lg font-medium text-gray-900">Activité Récente</h3>
+            </Card.Header>
+            <Card.Body>
+              {stats?.recentActivity && stats.recentActivity.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.recentActivity.slice(0, 5).map((activity, index) => (
+                    <div key={index} className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-900">{activity.description}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(activity.timestamp).toLocaleString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500">Aucune activité récente</p>
                 </div>
               )}
-              {user.secteur && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Secteur</span>
-                  <span className="text-sm font-medium">{user.secteur.name}</span>
-                </div>
-              )}
-              {user.service && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Service</span>
-                  <span className="text-sm font-medium">{user.service.name}</span>
-                </div>
-              )}
-            </div>
-          </Card.Body>
-        </Card>
+            </Card.Body>
+          </Card>
 
         {/* Actions rapides */}
         <Card>

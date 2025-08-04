@@ -1,7 +1,10 @@
+// Configuration des variables d'environnement FIRST
+import dotenv from 'dotenv';
+dotenv.config({ path: './config.env' });
+
 import express from 'express';
 import cors from 'cors';
 import connectDB from './db/connection.js';
-import dotenv from 'dotenv';
 import User from './models/User.js';
 import Site from './models/Site.js';
 import Secteur from './models/Secteur.js';
@@ -14,10 +17,8 @@ import cookieParser from 'cookie-parser';
 import organizationalRoutes from './routes/organizational.js';
 import secteursServicesRoutes from './routes/secteurs-services.js';
 import authJwtRoutes from './routes/auth-jwt.js';
-
-
-// Configuration des variables d'environnement
-dotenv.config({ path: './config.env' });
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -27,10 +28,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Configuration CORS simple
+// Configuration CORS pour permettre localhost et 127.0.0.1
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Middleware de logging simple
@@ -114,8 +123,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Find user with password (explicitly select it)
     const user = await User.findOne({ email }).select('+password').populate('site');
-    console.log('👤 User found:', user ? 'Yes' : 'No');
-    console.log('🔒 Password field exists:', user?.password ? 'Yes' : 'No');
+    console.log(' User found:', user ? 'Yes' : 'No');
+    console.log(' Password field exists:', user?.password ? 'Yes' : 'No');
 
     if (!user) {
       return res.status(401).json({
@@ -185,6 +194,9 @@ app.post('/api/auth/login', async (req, res) => {
           address: user.address || null,
           role: user.role,
           site: user.site?.name || null,
+          secteur: user.secteur?.name || null,
+          service: user.service?.name || null,
+          siteCode: user.site?.code || null,
           lastLogin: user.lastLogin
         },
         token,
@@ -253,6 +265,9 @@ app.get('/api/auth/me', async (req, res) => {
             name: user.site?.name,
             code: user.site?.code
           },
+          secteur: user.secteur?.name || null,
+          service: user.service?.name || null,
+          siteCode: user.site?.code || null,
           isActive: user.isActive,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt
@@ -298,6 +313,8 @@ app.get('/api/users', async (req, res) => {
         address: user.address || null,
         role: user.role,
         site: user.site?.name,
+        secteur: user.secteur?.name || null,
+        service: user.service?.name || null,
         isActive: user.isActive,
         lastLogin: user.lastLogin
       }))
@@ -306,6 +323,75 @@ app.get('/api/users', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur récupération utilisateurs',
+      error: error.message
+    });
+  }
+});
+
+// Get dashboard statistics
+app.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    // Get counts from database
+    const totalSites = await Site.countDocuments({ isActive: true });
+    const totalSecteurs = await Secteur.countDocuments({ isActive: true });
+    const totalServices = await Service.countDocuments({ isActive: true });
+    const totalUsers = await User.countDocuments({ isActive: true });
+    const activeUsers = await User.countDocuments({ isActive: true });
+
+    // Get users by role
+    const usersByRole = await User.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: '$role',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Convert to Record format
+    const usersByRoleRecord = {};
+    usersByRole.forEach(item => {
+      usersByRoleRecord[item._id] = item.count;
+    });
+
+    // Get recent activity (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentActivity = await User.find({
+      lastLogin: { $gte: sevenDaysAgo }
+    })
+    .select('firstName lastName role lastLogin')
+    .sort({ lastLogin: -1 })
+    .limit(5);
+
+    const stats = {
+      totalSites,
+      totalSecteurs,
+      totalServices,
+      totalUsers,
+      activeUsers,
+      usersByRole: usersByRoleRecord,
+      recentActivity: recentActivity.map(user => ({
+        id: user._id,
+        type: 'login',
+        user: `${user.firstName} ${user.lastName}`,
+        target: 'Dashboard',
+        description: `${user.firstName} ${user.lastName} (${user.role}) s'est connecté`,
+        timestamp: user.lastLogin
+      }))
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error getting dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur récupération statistiques dashboard',
       error: error.message
     });
   }
@@ -753,8 +839,12 @@ app.delete('/api/secteurs/:id', async (req, res) => {
 app.use('/api/org', organizationalRoutes);
 app.use('/api/org', secteursServicesRoutes);
 
-// Use JWT authentication routes
+// Use authentication routes
+app.use('/api/auth', authRoutes);
 app.use('/api/auth-jwt', authJwtRoutes);
+
+// Use user management routes
+app.use('/api/users', userRoutes);
 
 // Middleware 404
 app.use('*', (req, res) => {

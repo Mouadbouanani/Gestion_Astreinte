@@ -6,9 +6,12 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { Layout } from '@/components/common/Layout';
 import Login from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
-import MonSecteur from '@/pages/MonSecteur/MonSecteur';
-import MonService from '@/pages/MonService/MonService';
+
 import PlanningAstreinte from '@/pages/Planning/PlanningAstreinte';
+import { SitesPage, SecteurPage, ServicePage, SecteurDashboard } from "@/pages/Sites";
+import { UserManagement } from '@/pages/UserManagement';
+import { MonSecteur as NewMonSecteur, MesIngenieurs } from '@/pages/ChefSecteur';
+import { MonService as NewMonService, MonEquipe } from '@/pages/ChefService';
 
 function App() {
   return (
@@ -37,83 +40,65 @@ function App() {
               {/* Planning d'astreinte - accessible à tous les utilisateurs connectés */}
               <Route path="planning" element={<PlanningAstreinte />} />
 
-              {/* Mon Secteur - chef secteur uniquement */}
-              <Route path="mon-secteur" element={
-                <ProtectedRoute requiredRoles={['chef_secteur']}>
-                  <MonSecteur />
-                </ProtectedRoute>
-              } />
 
-              {/* Mon Service - chef service uniquement */}
-              <Route path="mon-service" element={
-                <ProtectedRoute requiredRoles={['chef_service']}>
-                  <MonService />
-                </ProtectedRoute>
-              } />
 
               {/* Routes admin uniquement */}
               <Route path="sites" element={
-                <ProtectedRoute requiredRoles={['admin']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Gestion des Sites</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                <ProtectedRoute minimumRole="admin">
+                  <SitesPage/>
                 </ProtectedRoute>
               } />
 
+              {/* Routes secteur - admin uniquement */}
               <Route path="secteurs" element={
                 <ProtectedRoute requiredRoles={['admin']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Gestion des Secteurs</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                  <SecteurPage />
                 </ProtectedRoute>
               } />
 
+              {/* Routes service - admin uniquement */}
               <Route path="services" element={
                 <ProtectedRoute requiredRoles={['admin']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Gestion des Services</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                  <ServicePage />
+                </ProtectedRoute>
+              } />
+
+              {/* Dashboard secteur - admin et chef_secteur */}
+              <Route path="secteur-dashboard" element={
+                <ProtectedRoute requiredRoles={['admin', 'chef_secteur']}>
+                  <SecteurDashboard />
                 </ProtectedRoute>
               } />
 
               <Route path="users" element={
                 <ProtectedRoute requiredRoles={['admin']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Gestion des Utilisateurs</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                  <UserManagement />
                 </ProtectedRoute>
               } />
 
               {/* Routes chef secteur */}
               <Route path="mon-secteur" element={
                 <ProtectedRoute requiredRoles={['chef_secteur']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Mon Secteur</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                  <NewMonSecteur />
                 </ProtectedRoute>
               } />
 
-              <Route path="mes-services" element={
+              <Route path="mes-ingenieurs" element={
                 <ProtectedRoute requiredRoles={['chef_secteur']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Mes Services</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                  <MesIngenieurs />
                 </ProtectedRoute>
               } />
 
               {/* Routes chef service */}
               <Route path="mon-service" element={
                 <ProtectedRoute requiredRoles={['chef_service']}>
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold">Mon Service</h1>
-                    <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                  </div>
+                  <NewMonService />
+                </ProtectedRoute>
+              } />
+
+              <Route path="mon-equipe" element={
+                <ProtectedRoute requiredRoles={['chef_service']}>
+                  <MonEquipe />
                 </ProtectedRoute>
               } />
 

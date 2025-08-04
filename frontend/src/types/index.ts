@@ -12,6 +12,7 @@ export interface User {
   service?: Service;
   address?: string;
   phone?: string;
+  lastLogin?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +62,16 @@ export interface Secteur {
   site: string | Site;
   isActive: boolean;
   chefSecteur?: string | User;
+  statistics?: {
+    servicesCount: number;
+    usersCount: number;
+    usersByRole: {
+      chefSecteur: number;
+      ingenieurs: number;
+      chefsService: number;
+      collaborateurs: number;
+    };
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +85,13 @@ export interface Service {
   isActive: boolean;
   chefService?: string | User;
   minPersonnel: number;
+  statistics?: {
+    totalPersonnel: number;
+    dernierePlanning?: string;
+    derniereGarde?: string;
+    tauxParticipation: number;
+    tempsReponseEscalade: number;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -105,12 +123,22 @@ export interface PermissionSet {
   delete: boolean;
 }
 
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
   data?: T;
   error?: string;
   code?: string;
+  pagination?: PaginationInfo;
 }
 
 export interface LoginCredentials {
@@ -126,7 +154,7 @@ export interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
   usersByRole: Record<UserRole, number>;
-  recentActivity: ActivityItem[];
+  recentActivity?: ActivityItem[];
 }
 
 export interface ActivityItem {
@@ -178,6 +206,19 @@ export interface CreateServiceForm {
   minPersonnel: number;
 }
 
+export interface CreateUserForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: UserRole;
+  site: string;
+  secteur?: string;
+  service?: string;
+  address?: string;
+}
+
 export interface UpdateUserForm {
   firstName: string;
   lastName: string;
@@ -215,13 +256,4 @@ export interface FilterOptions {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
-}
-
-export interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
 }

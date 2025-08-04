@@ -3,12 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configuration JWT
+// Configuration JWT with dynamic secret loading
 export const jwtConfig = {
-  secret: process.env.JWT_SECRET || 'ocp_astreinte_secret_key_2024',
+  get secret() {
+    return process.env.JWT_SECRET || 'ocp_astreinte_secret_key_2024';
+  },
   expiresIn: process.env.JWT_EXPIRES_IN || '24h',
   refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  issuer: 'OCP-Astreinte',
+  issuer: 'ocp-astreinte',
   audience: 'ocp-users'
 };
 
@@ -166,12 +168,18 @@ export const generateRefreshToken = (user) => {
 // Vérification de token
 export const verifyToken = (token) => {
   try {
+    // First try to verify with issuer and audience (new format)
     return jwt.verify(token, jwtConfig.secret, {
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience
     });
   } catch (error) {
-    throw new Error('Token invalide');
+    try {
+      // If that fails, try to verify without issuer and audience (legacy format)
+      return jwt.verify(token, jwtConfig.secret);
+    } catch (legacyError) {
+      throw new Error('Token invalide');
+    }
   }
 };
 

@@ -109,9 +109,7 @@ const siteSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Index pour optimiser les requêtes
-siteSchema.index({ code: 1 });
-siteSchema.index({ name: 1 });
+// Index pour optimiser les requêtes (code et name sont déjà indexés par unique: true)
 siteSchema.index({ isActive: 1 });
 
 // Virtual pour obtenir tous les secteurs du site

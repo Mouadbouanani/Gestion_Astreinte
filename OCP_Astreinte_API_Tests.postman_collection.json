@@ -1,0 +1,502 @@
+{
+  "info": {
+    "name": "OCP Astreinte API Tests",
+    "description": "Complete API testing collection for OCP Astreinte backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5050/api"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.success && response.data.accessToken) {",
+                  "        pm.collectionVariables.set('access_token', response.data.accessToken);",
+                  "        console.log('✅ Token saved:', response.data.accessToken.substring(0, 20) + '...');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ocp.ma\",\n  \"password\": \"Admin123!\",\n  \"rememberMe\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Chef Secteur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"chef.cas-trt@ocp.ma\",\n  \"password\": \"Chef123!\",\n  \"rememberMe\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Chef Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"chef.jlf-mnt-elec@ocp.ma\",\n  \"password\": \"Chef123!\",\n  \"rememberMe\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Debug Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{access_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/debug-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "debug-token"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 User Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"email\": \"test.user@ocp.ma\",\n  \"phone\": \"+212600000000\",\n  \"password\": \"Test123!\",\n  \"role\": \"collaborateur\",\n  \"site\": \"688a929278820687d876b703\",\n  \"secteur\": \"688a929278820687d876b70a\",\n  \"service\": \"688a929278820687d876b711\",\n  \"address\": \"Test Address\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/USER_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["users", "USER_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"User\",\n  \"phone\": \"+212600000001\",\n  \"address\": \"Updated Address\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/USER_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["users", "USER_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/USER_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["users", "USER_ID_HERE"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Organizational Structure",
+      "item": [
+        {
+          "name": "Get All Sites",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/sites",
+              "host": ["{{base_url}}"],
+              "path": ["org", "sites"]
+            }
+          }
+        },
+        {
+          "name": "Get All Secteurs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/secteurs",
+              "host": ["{{base_url}}"],
+              "path": ["org", "secteurs"]
+            }
+          }
+        },
+        {
+          "name": "Get Secteurs by Site ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/secteurs?siteId=688a929278820687d876b703",
+              "host": ["{{base_url}}"],
+              "path": ["org", "secteurs"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "688a929278820687d876b703"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Secteurs by Site Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/secteurs?siteId=Casablanca",
+              "host": ["{{base_url}}"],
+              "path": ["org", "secteurs"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "Casablanca"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/services",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services"]
+            }
+          }
+        },
+        {
+          "name": "Get Services by Secteur ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/services?secteurId=688a929278820687d876b70a",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services"],
+              "query": [
+                {
+                  "key": "secteurId",
+                  "value": "688a929278820687d876b70a"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Services by Secteur Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/services?secteurId=Extraction",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services"],
+              "query": [
+                {
+                  "key": "secteurId",
+                  "value": "Extraction"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Services by Site ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/services?siteId=688a929278820687d876b703",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "688a929278820687d876b703"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/stats",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Admin Management",
+      "item": [
+        {
+          "name": "Create Secteur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Secteur\",\n  \"code\": \"TEST\",\n  \"description\": \"Secteur de test\",\n  \"site\": \"688a929278820687d876b703\",\n  \"chefSecteur\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/org/secteurs",
+              "host": ["{{base_url}}"],
+              "path": ["org", "secteurs"]
+            }
+          }
+        },
+        {
+          "name": "Update Secteur",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Secteur\",\n  \"description\": \"Description mise à jour\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/org/secteurs/SECTEUR_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["org", "secteurs", "SECTEUR_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Delete Secteur",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/secteurs/SECTEUR_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["org", "secteurs", "SECTEUR_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Create Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Service\",\n  \"code\": \"TEST-SRV\",\n  \"description\": \"Service de test\",\n  \"secteur\": \"688a929278820687d876b70a\",\n  \"chefService\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/org/services",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services"]
+            }
+          }
+        },
+        {
+          "name": "Update Service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Service\",\n  \"description\": \"Description mise à jour\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/org/services/SERVICE_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services", "SERVICE_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Delete Service",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/org/services/SERVICE_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["org", "services", "SERVICE_ID_HERE"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

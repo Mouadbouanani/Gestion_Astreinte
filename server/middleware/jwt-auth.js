@@ -37,12 +37,33 @@ export const generateToken = (user) => {
  */
 export const verifyToken = (token) => {
   try {
-    return jwt.verify(token, JWT_SECRET, {
+    console.log('🔐 verifyToken - JWT_SECRET:', JWT_SECRET ? 'Set' : 'Not set');
+    console.log('🔐 verifyToken - Token length:', token.length);
+    
+    const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: 'ocp-astreinte',
       audience: 'ocp-users'
     });
+    
+    console.log('✅ verifyToken - Token verified successfully');
+    return decoded;
   } catch (error) {
-    throw new Error('Token invalide ou expiré');
+    console.error('❌ verifyToken - Verification failed:', {
+      name: error.name,
+      message: error.message,
+      tokenLength: token.length,
+      jwtSecretSet: !!JWT_SECRET
+    });
+    
+    if (error.name === 'TokenExpiredError') {
+      throw new Error('Token expiré');
+    } else if (error.name === 'JsonWebTokenError') {
+      throw new Error('Token invalide');
+    } else if (error.name === 'NotBeforeError') {
+      throw new Error('Token pas encore valide');
+    } else {
+      throw new Error(`Token invalide ou expiré: ${error.message}`);
+    }
   }
 };
 
@@ -55,11 +76,24 @@ export const verifyToken = (token) => {
  */
 export const authenticateToken = async (req, res, next) => {
   try {
+    console.log('🔐 Auth middleware - Request:', {
+      method: req.method,
+      url: req.url,
+      headers: {
+        authorization: req.headers['authorization'] ? 'Bearer [TOKEN]' : 'No auth header',
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']
+      }
+    });
+
     // Récupérer le token depuis l'en-tête Authorization
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
 
+    console.log('🔐 Auth middleware - Token extracted:', token ? `${token.substring(0, 20)}...` : 'No token');
+
     if (!token) {
+      console.log('❌ Auth middleware - No token provided');
       return res.status(401).json({
         success: false,
         message: 'Token d\'accès requis',
@@ -68,21 +102,42 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     // Vérifier et décoder le token
+    console.log('🔐 Auth middleware - Verifying token...');
     const decoded = verifyToken(token);
+    console.log('🔐 Auth middleware - Token decoded successfully:', {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+      exp: new Date(decoded.exp * 1000).toISOString(),
+      iat: new Date(decoded.iat * 1000).toISOString()
+    });
 
     // Récupérer l'utilisateur complet depuis la base
+    console.log('🔐 Auth middleware - Fetching user from database...');
     const user = await User.findById(decoded.id)
       .populate('site', 'name code')
       .populate('secteur', 'name code site')
       .populate('service', 'name code secteur');
 
     if (!user || !user.isActive) {
+      console.log('❌ Auth middleware - User not found or inactive:', {
+        userId: decoded.id,
+        userFound: !!user,
+        isActive: user?.isActive
+      });
       return res.status(401).json({
         success: false,
         message: 'Utilisateur introuvable ou inactif',
         code: 'USER_NOT_FOUND'
       });
     }
+
+    console.log('✅ Auth middleware - Authentication successful:', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive
+    });
 
     // Ajouter l'utilisateur à la requête
     req.user = user;
@@ -102,6 +157,12 @@ export const authenticateToken = async (req, res, next) => {
     next();
 
   } catch (error) {
+    console.error('❌ Auth middleware - Authentication failed:', {
+      error: error.message,
+      stack: error.stack,
+      token: req.headers['authorization'] ? 'Present' : 'Missing'
+    });
+    
     return res.status(403).json({
       success: false,
       message: 'Token invalide',

@@ -89,8 +89,7 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Index pour optimiser les requêtes
-userSchema.index({ email: 1 });
+// Index pour optimiser les requêtes (email est déjà indexé par unique: true)
 userSchema.index({ site: 1, secteur: 1, service: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 
