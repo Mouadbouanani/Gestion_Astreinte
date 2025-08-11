@@ -19,6 +19,7 @@ import secteursServicesRoutes from './routes/secteurs-services.js';
 import authJwtRoutes from './routes/auth-jwt.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
+import indisponibiliteRoutes from './routes/indisponibilites.js';
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -845,6 +846,9 @@ app.use('/api/auth-jwt', authJwtRoutes);
 
 // Use user management routes
 app.use('/api/users', userRoutes);
+
+// Unavailabilities
+app.use('/api/unavailability', indisponibiliteRoutes);
 
 // Middleware 404
 app.use('*', (req, res) => {

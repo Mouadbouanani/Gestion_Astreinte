@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { User, FilterOptions, PaginationInfo } from '@/types';
+import type { User, FilterOptions, PaginationInfo, Site, Secteur, Service } from '@/types';
 import { apiService } from '@/services/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import {
   MagnifyingGlassIcon,
-  PlusIcon,
   PencilIcon,
   TrashIcon,
   EyeIcon,
@@ -20,7 +19,6 @@ import {
 } from '@heroicons/react/24/outline';
 
 interface UserListProps {
-  onCreateUser: () => void;
   onEditUser: (user: User) => void;
   onViewUser: (user: User) => void;
 }
@@ -28,7 +26,6 @@ interface UserListProps {
 
 
 export const UserList: React.FC<UserListProps> = ({
-  onCreateUser,
   onEditUser,
   onViewUser
 }) => {
@@ -47,8 +44,40 @@ export const UserList: React.FC<UserListProps> = ({
     search: '',
     role: undefined,
     site: undefined,
+    secteur: undefined,
+    service: undefined,
     isActive: undefined
   });
+
+  // Cascading lists
+  const [sites, setSites] = useState<Site[]>([]);
+  const [secteurs, setSecteurs] = useState<Secteur[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    // preload sites
+    apiService.getSites().then(res => { if (res.success && res.data) setSites(res.data); });
+  }, []);
+
+  useEffect(() => {
+    // when site filter changes, load secteurs and reset lower filters
+    if (filters.site) {
+      apiService.getSecteurs(String(filters.site)).then(res => { if (res.success && res.data) setSecteurs(res.data); });
+    } else {
+      setSecteurs([]);
+    }
+    setFilters(prev => ({ ...prev, secteur: undefined, service: undefined }));
+  }, [filters.site]);
+
+  useEffect(() => {
+    // when secteur filter changes, load services and reset service
+    if (filters.secteur) {
+      apiService.getServicesBySecteur(String(filters.secteur)).then(res => { if (res.success && res.data) setServices(res.data); });
+    } else {
+      setServices([]);
+    }
+    setFilters(prev => ({ ...prev, service: undefined }));
+  }, [filters.secteur]);
 
   const fetchUsers = async (page = 1) => {
     try {
@@ -89,11 +118,17 @@ export const UserList: React.FC<UserListProps> = ({
   };
 
   const handleDeleteUser = async (userId: string) => {
+    if (!userId) {
+      toast.error('ID utilisateur manquant');
+      return;
+    }
+
     if (!window.confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')) {
       return;
     }
 
     try {
+
       const response = await apiService.deleteUser(userId);
       if (response.success) {
         toast.success('Utilisateur désactivé avec succès');
@@ -128,28 +163,15 @@ export const UserList: React.FC<UserListProps> = ({
   };
 
   const canManageUsers = currentUser?.role === 'admin';
-  const canCreateUsers = currentUser?.role === 'admin';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
-          <p className="text-gray-600">Gérez les utilisateurs du système</p>
-        </div>
-        {canCreateUsers && (
-          <Button onClick={onCreateUser} className="flex items-center space-x-2">
-            <PlusIcon className="h-5 w-5" />
-            <span>Nouvel Utilisateur</span>
-          </Button>
-        )}
-      </div>
+
 
       {/* Filters */}
       <Card>
         <Card.Body>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Rechercher
@@ -165,7 +187,7 @@ export const UserList: React.FC<UserListProps> = ({
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Rôle
@@ -186,13 +208,63 @@ export const UserList: React.FC<UserListProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Site
+              </label>
+              <select
+                value={filters.site || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, site: e.target.value || undefined }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocp-primary"
+              >
+                <option value="">Tous les sites</option>
+                {sites.map((s) => (
+                  <option key={s._id} value={s._id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Secteur
+              </label>
+              <select
+                value={filters.secteur || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, secteur: e.target.value || undefined }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocp-primary"
+                disabled={!filters.site}
+              >
+                <option value="">Tous les secteurs</option>
+                {secteurs.map((sec) => (
+                  <option key={sec._id} value={sec._id}>{sec.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Service
+              </label>
+              <select
+                value={filters.service || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, service: e.target.value || undefined }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocp-primary"
+                disabled={!filters.secteur}
+              >
+                <option value="">Tous les services</option>
+                {services.map((srv) => (
+                  <option key={srv._id} value={srv._id}>{srv.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Statut
               </label>
               <select
                 value={filters.isActive === undefined ? 'all' : filters.isActive.toString()}
-                onChange={(e) => setFilters(prev => ({ 
-                  ...prev, 
-                  isActive: e.target.value === 'all' ? undefined : e.target.value === 'true' 
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  isActive: e.target.value === 'all' ? undefined : e.target.value === 'true'
                 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ocp-primary"
               >
@@ -247,13 +319,20 @@ export const UserList: React.FC<UserListProps> = ({
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 rounded-full bg-ocp-primary flex items-center justify-center">
                               <span className="text-white font-medium">
-                                {user.firstName?.charAt(0) || '?'}{user.lastName?.charAt(0) || '?'}
+                                {(() => {
+                                  const displayName = user.fullName || user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+                                  const nameParts = displayName.split(' ');
+                                  if (nameParts.length >= 2) {
+                                    return nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0);
+                                  }
+                                  return displayName.charAt(0) || '?';
+                                })()}
                               </span>
                             </div>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {user.firstName || 'Prénom'} {user.lastName || 'Nom'}
+                              {user.fullName || user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Nom non défini'}
                             </div>
                             <div className="text-sm text-gray-500 flex items-center">
                               <EnvelopeIcon className="h-4 w-4 mr-1" />
@@ -274,22 +353,30 @@ export const UserList: React.FC<UserListProps> = ({
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="space-y-1">
+                        <div className="space-y-1 text-sm">
                           {user.site && (
-                            <div className="flex items-center">
+                            <div className="flex items-center text-gray-600">
                               <MapPinIcon className="h-4 w-4 mr-1 text-gray-400" />
-                              {user.site.name}
+                              <span className="font-medium">Site:</span>
+                              <span className="ml-1">{typeof user.site === 'object' ? user.site.name : user.site}</span>
                             </div>
                           )}
-                          {user.secteur && (
-                            <div className="text-gray-600">
-                              📍 {user.secteur.name}
+                          {user.secteur && (user.role === 'chef_secteur' || user.role === 'chef_service' || user.role === 'collaborateur') && (
+                            <div className="flex items-center text-gray-600">
+                              <span className="text-blue-500 mr-1">🏢</span>
+                              <span className="font-medium">Secteur:</span>
+                              <span className="ml-1">{typeof user.secteur === 'object' ? user.secteur.name : user.secteur}</span>
                             </div>
                           )}
-                          {user.service && (
-                            <div className="text-gray-600">
-                              ⚙️ {user.service.name}
+                          {user.service && (user.role === 'chef_service' || user.role === 'collaborateur') && (
+                            <div className="flex items-center text-gray-600">
+                              <span className="text-green-500 mr-1">⚙️</span>
+                              <span className="font-medium">Service:</span>
+                              <span className="ml-1">{typeof user.service === 'object' ? user.service.name : user.service}</span>
                             </div>
+                          )}
+                          {!user.site && !user.secteur && !user.service && (
+                            <span className="text-gray-400 italic">Organisation non définie</span>
                           )}
                         </div>
                       </td>
@@ -319,7 +406,7 @@ export const UserList: React.FC<UserListProps> = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteUser(user.id)}
+                                onClick={() => handleDeleteUser(user._id || user.id || '')}
                                 className="text-red-600 hover:text-red-800"
                               >
                                 <TrashIcon className="h-4 w-4" />

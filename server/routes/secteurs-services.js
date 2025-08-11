@@ -45,6 +45,50 @@ router.get('/secteurs', async (req, res) => {
   }
 });
 
+// Get secteurs by site name (alternative endpoint for backward compatibility)
+router.get('/sites/by-name/:siteName/secteurs', async (req, res) => {
+  try {
+    const { siteName } = req.params;
+
+    const site = await Site.findOne({ name: siteName });
+    if (!site) {
+      return res.status(404).json({
+        success: false,
+        message: 'Site introuvable'
+      });
+    }
+
+    const secteurs = await Secteur.find({ site: site._id, isActive: true })
+      .populate('site', 'name code')
+      .sort({ name: 1 });
+
+    const secteursWithData = await Promise.all(
+      secteurs.map(async (secteur) => {
+        const services = await Service.find({ secteur: secteur._id, isActive: true });
+        const users = await User.find({ secteur: secteur._id, isActive: true })
+          .select('firstName lastName role email');
+
+        return {
+          ...secteur.toObject(),
+          servicesCount: services.length,
+          usersCount: users.length
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: secteursWithData
+    });
+  } catch (error) {
+    console.error('❌ Error getting secteurs by site name:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur récupération secteurs'
+    });
+  }
+});
+
 // Get secteurs by site
 router.get('/sites/:siteId/secteurs', async (req, res) => {
   try {
@@ -446,6 +490,60 @@ router.delete('/sites/:siteId/secteurs/:id',
     }
   });
 
+// Update secteur (site-based endpoint)
+router.put('/sites/:siteId/secteurs/:id',
+  flexibleAuth,
+  async (req, res) => {
+    try {
+      const { siteId, id } = req.params;
+      const { name, code, description, isActive } = req.body;
+
+      // Validate site exists
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      // Find and update secteur
+      const secteur = await Secteur.findOne({ _id: id, site: siteId });
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable'
+        });
+      }
+
+      // Update fields
+      if (name) secteur.name = name;
+      if (code) secteur.code = code.toUpperCase();
+      if (description !== undefined) secteur.description = description;
+      if (isActive !== undefined) secteur.isActive = isActive;
+
+      await secteur.save();
+
+      // Populate site info
+      await secteur.populate('site', 'name code');
+
+      res.json({
+        success: true,
+        message: 'Secteur mis à jour avec succès',
+        data: secteur
+      });
+
+    } catch (error) {
+      console.error('❌ Error updating secteur:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de la mise à jour du secteur',
+        error: error.message
+      });
+    }
+  }
+);
+
 // Activate/Reactivate secteur
 router.patch('/sites/:siteId/secteurs/:id/activate',
   flexibleAuth,
@@ -595,6 +693,47 @@ router.get('/services', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error getting services:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur récupération services'
+    });
+  }
+});
+
+// Get services by secteur name (alternative endpoint for backward compatibility)
+router.get('/secteurs/by-name/:secteurName/services', async (req, res) => {
+  try {
+    const { secteurName } = req.params;
+
+    const secteur = await Secteur.findOne({ name: secteurName }).populate('site', 'name code');
+    if (!secteur) {
+      return res.status(404).json({
+        success: false,
+        message: 'Secteur introuvable'
+      });
+    }
+
+    const services = await Service.find({ secteur: secteur._id, isActive: true })
+      .sort({ name: 1 });
+
+    const servicesWithUsers = await Promise.all(
+      services.map(async (service) => {
+        const users = await User.find({ service: service._id, isActive: true })
+          .select('firstName lastName role email');
+
+        return {
+          ...service.toObject(),
+          usersCount: users.length
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: servicesWithUsers
+    });
+  } catch (error) {
+    console.error('❌ Error getting services by secteur name:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur récupération services'
@@ -1252,5 +1391,341 @@ router.delete('/services/:id', authenticateToken, smartAuthorization(['admin']),
     });
   }
 });
+
+// ========================================
+// 3-LEVEL HIERARCHY SERVICE ENDPOINTS
+// Sites → Secteurs → Services
+// ========================================
+
+// Get services for a specific secteur in a specific site
+router.get('/sites/:siteId/secteurs/:secteurId/services', async (req, res) => {
+  try {
+    const { siteId, secteurId } = req.params;
+
+    // Validate site exists
+    const site = await Site.findById(siteId);
+    if (!site) {
+      return res.status(404).json({
+        success: false,
+        message: 'Site introuvable'
+      });
+    }
+
+    // Validate secteur exists and belongs to site
+    const secteur = await Secteur.findOne({ _id: secteurId, site: siteId });
+    if (!secteur) {
+      return res.status(404).json({
+        success: false,
+        message: 'Secteur introuvable dans ce site'
+      });
+    }
+
+    // Get services for this secteur
+    const services = await Service.find({ secteur: secteurId, isActive: true })
+      .populate('secteur', 'name code')
+      .populate('chefService', 'firstName lastName email')
+      .sort({ name: 1 });
+
+    res.json({
+      success: true,
+      count: services.length,
+      data: services
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting services:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des services',
+      error: error.message
+    });
+  }
+});
+
+// Create service in specific secteur of specific site
+router.post('/sites/:siteId/secteurs/:secteurId/services',
+  flexibleAuth,
+  async (req, res) => {
+    try {
+      const { siteId, secteurId } = req.params;
+      const { name, code, description, minPersonnel } = req.body;
+
+      // Validation
+      if (!name || !code) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nom et code sont requis'
+        });
+      }
+
+      // Validate site exists
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      // Validate secteur exists and belongs to site
+      const secteur = await Secteur.findOne({ _id: secteurId, site: siteId });
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable dans ce site'
+        });
+      }
+
+      // Check if service with same name exists (inactive)
+      const existingService = await Service.findOne({
+        name: name.trim(),
+        secteur: secteurId,
+        isActive: false
+      });
+
+      if (existingService) {
+        // Reactivate existing service
+        existingService.isActive = true;
+        existingService.code = code.toUpperCase();
+        if (description) existingService.description = description;
+        if (minPersonnel) existingService.minPersonnel = minPersonnel;
+
+        await existingService.save();
+        await existingService.populate('secteur', 'name code');
+
+        return res.status(200).json({
+          success: true,
+          message: 'Service réactivé avec succès',
+          data: { ...existingService.toObject(), wasReactivated: true }
+        });
+      }
+
+      // Check if active service with same name exists
+      const activeService = await Service.findOne({
+        name: name.trim(),
+        secteur: secteurId,
+        isActive: true
+      });
+
+      if (activeService) {
+        return res.status(409).json({
+          success: false,
+          message: 'Un service avec ce nom existe déjà dans ce secteur',
+          code: 'SERVICE_EXISTS_ACTIVE'
+        });
+      }
+
+      // Create new service
+      const newService = new Service({
+        name: name.trim(),
+        code: code.toUpperCase(),
+        description: description?.trim(),
+        secteur: secteurId,
+        minPersonnel: minPersonnel || 1,
+        isActive: true
+      });
+
+      await newService.save();
+      await newService.populate('secteur', 'name code');
+
+      res.status(201).json({
+        success: true,
+        message: 'Service créé avec succès',
+        data: newService
+      });
+
+    } catch (error) {
+      console.error('❌ Error creating service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de la création du service',
+        error: error.message
+      });
+    }
+  }
+);
+
+// Update service in specific secteur of specific site
+router.put('/sites/:siteId/secteurs/:secteurId/services/:id',
+  flexibleAuth,
+  async (req, res) => {
+    try {
+      const { siteId, secteurId, id } = req.params;
+      const { name, code, description, minPersonnel, isActive } = req.body;
+
+      // Validate site exists
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      // Validate secteur exists and belongs to site
+      const secteur = await Secteur.findOne({ _id: secteurId, site: siteId });
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable dans ce site'
+        });
+      }
+
+      // Find and update service
+      const service = await Service.findOne({ _id: id, secteur: secteurId });
+      if (!service) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service introuvable dans ce secteur'
+        });
+      }
+
+      // Update fields
+      if (name) service.name = name.trim();
+      if (code) service.code = code.toUpperCase();
+      if (description !== undefined) service.description = description?.trim();
+      if (minPersonnel) service.minPersonnel = minPersonnel;
+      if (isActive !== undefined) service.isActive = isActive;
+
+      await service.save();
+      await service.populate('secteur', 'name code');
+
+      res.json({
+        success: true,
+        message: 'Service mis à jour avec succès',
+        data: service
+      });
+
+    } catch (error) {
+      console.error('❌ Error updating service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de la mise à jour du service',
+        error: error.message
+      });
+    }
+  }
+);
+
+// Delete service in specific secteur of specific site (soft delete)
+router.delete('/sites/:siteId/secteurs/:secteurId/services/:id',
+  flexibleAuth,
+  async (req, res) => {
+    try {
+      const { siteId, secteurId, id } = req.params;
+
+      // Validate site exists
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      // Validate secteur exists and belongs to site
+      const secteur = await Secteur.findOne({ _id: secteurId, site: siteId });
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable dans ce site'
+        });
+      }
+
+      // Find service
+      const service = await Service.findOne({ _id: id, secteur: secteurId });
+      if (!service) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service introuvable dans ce secteur'
+        });
+      }
+
+      // Check if service has active users
+      const activeUsers = await User.countDocuments({ service: id, isActive: true });
+      if (activeUsers > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Impossible de supprimer le service. Il contient ${activeUsers} utilisateur(s) actif(s).`,
+          code: 'SERVICE_HAS_ACTIVE_USERS',
+          data: { activeUsers }
+        });
+      }
+
+      // Soft delete
+      service.isActive = false;
+      await service.save();
+
+      res.json({
+        success: true,
+        message: 'Service supprimé avec succès',
+        data: { id: service._id, name: service.name }
+      });
+
+    } catch (error) {
+      console.error('❌ Error deleting service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de la suppression du service',
+        error: error.message
+      });
+    }
+  }
+);
+
+// Activate service in specific secteur of specific site
+router.patch('/sites/:siteId/secteurs/:secteurId/services/:id/activate',
+  flexibleAuth,
+  async (req, res) => {
+    try {
+      const { siteId, secteurId, id } = req.params;
+
+      // Validate site exists
+      const site = await Site.findById(siteId);
+      if (!site) {
+        return res.status(404).json({
+          success: false,
+          message: 'Site introuvable'
+        });
+      }
+
+      // Validate secteur exists and belongs to site
+      const secteur = await Secteur.findOne({ _id: secteurId, site: siteId });
+      if (!secteur) {
+        return res.status(404).json({
+          success: false,
+          message: 'Secteur introuvable dans ce site'
+        });
+      }
+
+      // Find and activate service
+      const service = await Service.findOne({ _id: id, secteur: secteurId });
+      if (!service) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service introuvable dans ce secteur'
+        });
+      }
+
+      service.isActive = true;
+      await service.save();
+      await service.populate('secteur', 'name code');
+
+      res.json({
+        success: true,
+        message: 'Service activé avec succès',
+        data: { ...service.toObject(), wasReactivated: true }
+      });
+
+    } catch (error) {
+      console.error('❌ Error activating service:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de l\'activation du service',
+        error: error.message
+      });
+    }
+  }
+);
 
 export default router;

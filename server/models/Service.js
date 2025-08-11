@@ -22,10 +22,10 @@ const serviceSchema = new mongoose.Schema({
   chefService: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Le chef de service est requis'],
+    required: false, // Allow creation without chef, can be assigned later
     validate: {
       validator: async function(userId) {
-        if (!userId) return false;
+        if (!userId) return true; // Allow null/undefined
         
         const User = mongoose.model('User');
         const user = await User.findById(userId);
@@ -158,18 +158,20 @@ serviceSchema.pre('save', async function(next) {
       const User = mongoose.model('User');
       const Secteur = mongoose.model('Secteur');
       
-      // Vérifier que le chef de service appartient au bon secteur
-      const chef = await User.findById(this.chefService);
-      if (!chef) {
-        return next(new Error('Chef de service introuvable'));
-      }
-      
-      if (chef.role !== 'chef_service') {
-        return next(new Error('L\'utilisateur doit avoir le rôle chef_service'));
-      }
-      
-      if (chef.secteur.toString() !== this.secteur.toString()) {
-        return next(new Error('Le chef de service doit appartenir au même secteur'));
+      // Vérifier que le chef de service appartient au bon secteur (si défini)
+      if (this.chefService) {
+        const chef = await User.findById(this.chefService);
+        if (!chef) {
+          return next(new Error('Chef de service introuvable'));
+        }
+
+        if (chef.role !== 'chef_service') {
+          return next(new Error('L\'utilisateur doit avoir le rôle chef_service'));
+        }
+
+        if (chef.secteur.toString() !== this.secteur.toString()) {
+          return next(new Error('Le chef de service doit appartenir au même secteur'));
+        }
       }
 
       // Vérifier que le secteur existe
@@ -201,16 +203,16 @@ serviceSchema.pre('save', async function(next) {
 serviceSchema.methods.getTousLesMembres = async function() {
   const User = mongoose.model('User');
   
-  const chef = await User.findById(this.chefService);
+  const chef = this.chefService ? await User.findById(this.chefService) : null;
   const collaborateurs = await User.find({
     _id: { $in: this.collaborateurs },
     isActive: true
   });
-  
+
   return {
     chef,
     collaborateurs,
-    total: collaborateurs.length + 1
+    total: collaborateurs.length + (chef ? 1 : 0)
   };
 };
 
@@ -220,7 +222,9 @@ serviceSchema.methods.getMembresDisponibles = async function(dateDebut, dateFin)
   const Indisponibilite = mongoose.model('Indisponibilite');
   
   // Obtenir tous les membres du service
-  const tousLesMembres = [this.chefService, ...this.collaborateurs];
+  const tousLesMembres = this.chefService
+    ? [this.chefService, ...this.collaborateurs]
+    : [...this.collaborateurs];
   const membresDisponibles = [];
   
   for (const membreId of tousLesMembres) {
@@ -259,8 +263,10 @@ serviceSchema.methods.calculerChargeEquitable = async function(periode) {
   });
   
   const chargeParMembre = {};
-  const tousLesMembres = [this.chefService, ...this.collaborateurs];
-  
+  const tousLesMembres = this.chefService
+    ? [this.chefService, ...this.collaborateurs]
+    : [...this.collaborateurs];
+
   // Initialiser les compteurs
   tousLesMembres.forEach(membreId => {
     chargeParMembre[membreId] = 0;

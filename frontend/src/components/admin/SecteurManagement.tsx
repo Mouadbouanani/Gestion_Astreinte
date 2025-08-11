@@ -72,22 +72,28 @@ const SecteurManagement: React.FC = () => {
 
       let response;
       if (editingSecteur) {
-        response = await apiService.updateSecteur(editingSecteur._id, payload);
+        // For update, we need the site ID from the secteur
+        const siteId = editingSecteur.site?._id || editingSecteur.site;
+        response = await apiService.updateSecteur(siteId, editingSecteur._id, payload);
       } else {
-        response = await apiService.createSecteur(payload);
+        // For create, site ID is in the payload
+        response = await apiService.createSecteur(payload.site, payload);
       }
 
       if (response.success) {
-        toast.success(editingSecteur ? 'Secteur mis à jour' : 'Secteur créé');
+        const message = editingSecteur ? 'Secteur mis à jour' :
+                        response.data?.wasReactivated ? 'Secteur réactivé avec succès' : 'Secteur créé';
+        toast.success(message);
         setShowModal(false);
         resetForm();
         fetchData();
       } else {
         toast.error(response.message || 'Erreur lors de la sauvegarde');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving secteur:', error);
-      toast.error('Erreur lors de la sauvegarde');
+      const message = error.response?.data?.message || 'Erreur lors de la sauvegarde';
+      toast.error(message);
     }
   };
 
@@ -109,7 +115,9 @@ const SecteurManagement: React.FC = () => {
     }
 
     try {
-      const response = await apiService.deleteSecteur(secteur._id);
+      // Get site ID from the secteur
+      const siteId = secteur.site?._id || secteur.site;
+      const response = await apiService.deleteSecteur(siteId, secteur._id);
       if (response.success) {
         toast.success('Secteur supprimé');
         fetchData();

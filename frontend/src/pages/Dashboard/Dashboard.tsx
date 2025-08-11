@@ -49,6 +49,25 @@ const Dashboard: React.FC = () => {
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
   });
 
+  // Helper functions to safely access user properties
+  const getSiteName = (site: any): string => {
+    if (typeof site === 'string') return site;
+    if (typeof site === 'object' && site?.name) return site.name;
+    return 'N/A';
+  };
+
+  const getSecteurName = (secteur: any): string => {
+    if (typeof secteur === 'string') return secteur;
+    if (typeof secteur === 'object' && secteur?.name) return secteur.name;
+    return 'N/A';
+  };
+
+  const getServiceName = (service: any): string => {
+    if (typeof service === 'string') return service;
+    if (typeof service === 'object' && service?.name) return service.name;
+    return 'N/A';
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -57,7 +76,8 @@ const Dashboard: React.FC = () => {
     try {
       setIsLoading(true);
       console.log('📊 Loading dashboard data...');
-      
+      console.log('📊 API Base URL:', import.meta.env.VITE_API_URL || 'http://localhost:5050/api');
+
       // Fetch real data from API
       const response = await apiService.getDashboardStats();
       console.log('📊 Dashboard API response:', response);
@@ -167,15 +187,15 @@ const Dashboard: React.FC = () => {
                   <span className="text-sm text-gray-600">Collaborateurs de garde</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm">🏖️</span>
+                  <span className="text-sm"></span>
                   <span className="text-sm text-gray-600">Astreinte weekend (24h)</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm">📅</span>
+                  <span className="text-sm"></span>
                   <span className="text-sm text-gray-600">Samedi & Dimanche uniquement</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm">⏰</span>
+                  <span className="text-sm"></span>
                   <span className="text-sm text-gray-600">Permanence 24h/24</span>
                 </div>
               </div>
@@ -298,7 +318,7 @@ const Dashboard: React.FC = () => {
           <>
             <StatCard
               title="Mon Secteur"
-              value={user.secteur?.name || 'N/A'}
+              value={getSecteurName(user.secteur)}
               icon={BuildingOfficeIcon}
               color="blue"
               href="/mon-secteur"
@@ -325,7 +345,7 @@ const Dashboard: React.FC = () => {
           <>
             <StatCard
               title="Mon Service"
-              value={user.service?.name || 'N/A'}
+              value={getServiceName(user.service)}
               icon={WrenchScrewdriverIcon}
               color="blue"
               href="/mon-service"
@@ -389,18 +409,18 @@ const Dashboard: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold">{getWelcomeMessage()}</h1>
             <p className="mt-2 opacity-90">
-              Astreinte Weekends OCP - {user.site?.name || 'Tous sites'}
+              Astreinte Weekends OCP - {getSiteName(user.site) || 'Tous sites'}
             </p>
             <div className="mt-4 flex items-center space-x-4">
               <Badge role={user.role} />
               {user.site && (
-                <span className="text-sm opacity-90">📍 {user.site.name}</span>
+                <span className="text-sm opacity-90"> {getSiteName(user.site)}</span>
               )}
               {user.secteur && (
-                <span className="text-sm opacity-90">🏢 {user.secteur.name}</span>
+                <span className="text-sm opacity-90"> {getSecteurName(user.secteur)}</span>
               )}
               {user.service && (
-                <span className="text-sm opacity-90">⚙️ {user.service.name}</span>
+                <span className="text-sm opacity-90"> {getServiceName(user.service)}</span>
               )}
             </div>
           </div>
@@ -467,19 +487,19 @@ const Dashboard: React.FC = () => {
                 {user.site && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Site</span>
-                    <span className="text-sm font-medium">{user.site.name}</span>
+                    <span className="text-sm font-medium">{getSiteName(user.site)}</span>
                   </div>
                 )}
                 {user.secteur && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Secteur</span>
-                    <span className="text-sm font-medium">{user.secteur.name}</span>
+                    <span className="text-sm font-medium">{getSecteurName(user.secteur)}</span>
                   </div>
                 )}
                 {user.service && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Service</span>
-                    <span className="text-sm font-medium">{user.service.name}</span>
+                    <span className="text-sm font-medium">{getServiceName(user.service)}</span>
                   </div>
                 )}
               </div>

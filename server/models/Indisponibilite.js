@@ -163,121 +163,66 @@ indisponibiliteSchema.virtual('future').get(function() {
   return this.dateDebut > new Date();
 });
 
-// Middleware pour calculer les métadonnées avant sauvegarde
+// Simplified pre-save middleware without circular references
 indisponibiliteSchema.pre('save', function(next) {
-  // Calculer la durée en jours
-  this.metadata.dureeJours = this.duree;
-  
-  // Calculer le nombre de weekends inclus
-  let weekends = 0;
-  const current = new Date(this.dateDebut);
-  
-  while (current <= this.dateFin) {
-    if (current.getDay() === 0 || current.getDay() === 6) {
-      weekends++;
+  // Calculate duration in days
+  if (this.metadata) {
+    this.metadata.dureeJours = this.duree;
+
+    // Calculate weekends included
+    let weekends = 0;
+    const current = new Date(this.dateDebut);
+
+    while (current <= this.dateFin) {
+      if (current.getDay() === 0 || current.getDay() === 6) {
+        weekends++;
+      }
+      current.setDate(current.getDate() + 1);
     }
-    current.setDate(current.getDate() + 1);
+
+    this.metadata.weekendsInclus = weekends;
   }
-  
-  this.metadata.weekendsInclus = weekends;
-  
-  // Ajouter à l'historique si c'est une modification
-  if (!this.isNew && this.isModified()) {
-    this.historique.push({
-      action: 'modification',
-      effectuePar: this.modifiedBy || this.utilisateur,
-      date: new Date(),
-      commentaire: 'Modification automatique',
-      anciennesValeurs: this.getChanges()
-    });
-  }
-  
+
   next();
 });
 
-// Middleware pour ajouter à l'historique lors de la création
-indisponibiliteSchema.post('save', function(doc) {
-  if (doc.historique.length === 0) {
-    doc.historique.push({
-      action: 'creation',
-      effectuePar: doc.utilisateur,
-      date: new Date(),
-      commentaire: 'Création de l\'indisponibilité'
-    });
-    doc.save();
-  }
-});
-
-// Méthode pour approuver l'indisponibilité
+// Simplified approval method
 indisponibiliteSchema.methods.approuver = async function(approbateurId, commentaire, niveauApprobation) {
   if (this.statut !== 'en_attente') {
     throw new Error('Seules les indisponibilités en attente peuvent être approuvées');
   }
-  
+
   this.statut = 'approuve';
   this.approbation.approuvePar = approbateurId;
   this.approbation.approuveLe = new Date();
   this.approbation.commentaireApprobation = commentaire;
   this.approbation.niveauApprobation = niveauApprobation;
-  
-  // Ajouter à l'historique
-  this.historique.push({
-    action: 'approbation',
-    effectuePar: approbateurId,
-    date: new Date(),
-    commentaire: commentaire || 'Indisponibilité approuvée'
-  });
-  
-  // Marquer pour recalcul des plannings
-  this.impact.recalculNecessaire = true;
-  
-  await this.save();
-  
-  // Analyser l'impact sur les plannings existants
-  await this.analyserImpactPlannings();
-  
-  return this;
+
+  return this.save();
 };
 
-// Méthode pour refuser l'indisponibilité
+// Simplified rejection method
 indisponibiliteSchema.methods.refuser = function(approbateurId, motif, niveauApprobation) {
   if (this.statut !== 'en_attente') {
     throw new Error('Seules les indisponibilités en attente peuvent être refusées');
   }
-  
+
   this.statut = 'refuse';
   this.approbation.approuvePar = approbateurId;
   this.approbation.approuveLe = new Date();
   this.approbation.commentaireApprobation = motif;
   this.approbation.niveauApprobation = niveauApprobation;
-  
-  // Ajouter à l'historique
-  this.historique.push({
-    action: 'refus',
-    effectuePar: approbateurId,
-    date: new Date(),
-    commentaire: motif || 'Indisponibilité refusée'
-  });
-  
+
   return this.save();
 };
 
-// Méthode pour annuler l'indisponibilité
+// Simplified cancellation method
 indisponibiliteSchema.methods.annuler = function(utilisateurId, motif) {
   if (!['en_attente', 'approuve'].includes(this.statut)) {
     throw new Error('Impossible d\'annuler cette indisponibilité');
   }
-  
+
   this.statut = 'annule';
-  
-  // Ajouter à l'historique
-  this.historique.push({
-    action: 'annulation',
-    effectuePar: utilisateurId,
-    date: new Date(),
-    commentaire: motif || 'Indisponibilité annulée'
-  });
-  
   return this.save();
 };
 

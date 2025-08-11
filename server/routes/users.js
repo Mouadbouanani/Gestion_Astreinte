@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { body } from 'express-validator';
 import {
   getUsers,
@@ -8,7 +9,7 @@ import {
   deleteUser
 } from '../controllers/userController.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { checkRole } from '../middleware/roleAuth.js';
+import { smartAuthorization } from '../middleware/jwt-auth.js';
 
 const router = express.Router();
 
@@ -38,16 +39,25 @@ const createUserValidation = [
     .isIn(['admin', 'chef_secteur', 'ingenieur', 'chef_service', 'collaborateur'])
     .withMessage('Rôle invalide'),
   body('site')
-    .isMongoId()
-    .withMessage('ID de site invalide'),
+    .custom((value) => {
+      // Allow either MongoDB ObjectId or string name
+      return mongoose.Types.ObjectId.isValid(value) || typeof value === 'string';
+    })
+    .withMessage('Site invalide'),
   body('secteur')
     .optional()
-    .isMongoId()
-    .withMessage('ID de secteur invalide'),
+    .custom((value) => {
+      // Allow either MongoDB ObjectId or string name
+      return mongoose.Types.ObjectId.isValid(value) || typeof value === 'string';
+    })
+    .withMessage('Secteur invalide'),
   body('service')
     .optional()
-    .isMongoId()
-    .withMessage('ID de service invalide'),
+    .custom((value) => {
+      // Allow either MongoDB ObjectId or string name
+      return mongoose.Types.ObjectId.isValid(value) || typeof value === 'string';
+    })
+    .withMessage('Service invalide'),
   body('address')
     .optional()
     .trim()
@@ -82,16 +92,25 @@ const updateUserValidation = [
     .withMessage('Rôle invalide'),
   body('site')
     .optional()
-    .isMongoId()
-    .withMessage('ID de site invalide'),
+    .custom((value) => {
+      // Allow either MongoDB ObjectId or string name
+      return mongoose.Types.ObjectId.isValid(value) || typeof value === 'string';
+    })
+    .withMessage('Site invalide'),
   body('secteur')
     .optional()
-    .isMongoId()
-    .withMessage('ID de secteur invalide'),
+    .custom((value) => {
+      // Allow either MongoDB ObjectId or string name
+      return mongoose.Types.ObjectId.isValid(value) || typeof value === 'string';
+    })
+    .withMessage('Secteur invalide'),
   body('service')
     .optional()
-    .isMongoId()
-    .withMessage('ID de service invalide'),
+    .custom((value) => {
+      // Allow either MongoDB ObjectId or string name
+      return mongoose.Types.ObjectId.isValid(value) || typeof value === 'string';
+    })
+    .withMessage('Service invalide'),
   body('address')
     .optional()
     .trim()
@@ -106,32 +125,25 @@ const updateUserValidation = [
 /**
  * @route   GET /api/users
  * @desc    Get all users with filtering and pagination
- * @access  Private (Admin, Chef Secteur)
+ * @access  Public (like secteurs)
  */
-router.get('/', 
-  authenticateToken, 
-  checkRole(['admin', 'chef_secteur', 'chef_service']), 
-  getUsers
-);
+router.get('/', getUsers);
 
 /**
  * @route   GET /api/users/:id
  * @desc    Get single user by ID
- * @access  Private (Admin, Chef Secteur, or own profile)
+ * @access  Public (like secteurs)
  */
-router.get('/:id', 
-  authenticateToken, 
-  getUserById
-);
+router.get('/:id', getUserById);
 
 /**
  * @route   POST /api/users
  * @desc    Create new user
- * @access  Private (Admin only)
+ * @access  Private (Admin only - using flexibleAuth like frontend)
  */
-router.post('/', 
-  authenticateToken, 
-  checkRole(['admin']), 
+router.post('/',
+  authenticateToken,
+  smartAuthorization(['admin']),
   createUserValidation,
   createUser
 );
@@ -139,10 +151,11 @@ router.post('/',
 /**
  * @route   PUT /api/users/:id
  * @desc    Update user
- * @access  Private (Admin, Chef Secteur, or own profile)
+ * @access  Private (Admin only - using flexibleAuth like frontend)
  */
-router.put('/:id', 
-  authenticateToken, 
+router.put('/:id',
+  authenticateToken,
+  smartAuthorization(['admin']),
   updateUserValidation,
   updateUser
 );
@@ -150,11 +163,11 @@ router.put('/:id',
 /**
  * @route   DELETE /api/users/:id
  * @desc    Delete user (soft delete)
- * @access  Private (Admin only)
+ * @access  Private (Admin only - using flexibleAuth like frontend)
  */
-router.delete('/:id', 
-  authenticateToken, 
-  checkRole(['admin']), 
+router.delete('/:id',
+  authenticateToken,
+  smartAuthorization(['admin']),
   deleteUser
 );
 

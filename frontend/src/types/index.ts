@@ -1,20 +1,23 @@
 // Types pour l'application OCP Astreinte
 
 export interface User {
-  id: string;
+  id?: string;
+  _id?: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string; // Backend returns this field instead of firstName/lastName
+  fullName?: string; // Virtual field from backend
   role: UserRole;
   isActive: boolean;
-  site?: Site;
-  secteur?: Secteur;
-  service?: Service;
+  site?: Site | string; // Backend returns string name, not object
+  secteur?: Secteur | string; // Backend returns string name, not object
+  service?: Service | string; // Backend returns string name, not object
   address?: string;
   phone?: string;
   lastLogin?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type UserRole = 'admin' | 'chef_secteur' | 'chef_service' | 'ingenieur' | 'collaborateur';
@@ -62,6 +65,7 @@ export interface Secteur {
   site: string | Site;
   isActive: boolean;
   chefSecteur?: string | User;
+  wasReactivated?: boolean; // Added for reactivation feedback
   statistics?: {
     servicesCount: number;
     usersCount: number;
@@ -84,9 +88,15 @@ export interface Service {
   secteur: string | Secteur;
   isActive: boolean;
   chefService?: string | User;
+  collaborateurs?: (string | User)[]; // Array of collaborators
+  users?: User[]; // Array of all users in the service (from API response)
   minPersonnel: number;
+  wasReactivated?: boolean; // Added for reactivation feedback
   statistics?: {
     totalPersonnel: number;
+    usersCount?: number;
+    chefsService?: number;
+    collaborateurs?: number;
     dernierePlanning?: string;
     derniereGarde?: string;
     tauxParticipation: number;

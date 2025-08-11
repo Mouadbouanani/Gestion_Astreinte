@@ -27,7 +27,7 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 10000,
+      timeout: 35000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -150,14 +150,37 @@ class ApiService {
 
   // Méthodes d'authentification
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await this.api.post<AuthResponse>('/auth/login', credentials);
+    try {
+      // Primary: real JWT login (hits DB)
+      const response = await this.api.post<AuthResponse>('/auth-jwt/login', credentials);
+      if (response.data.success) {
+        this.setToken(response.data.data.token);
+        localStorage.setItem('ocp_user', JSON.stringify(response.data.data.user));
+      }
+      return response.data;
+    } catch (err: any) {
+      // Dev fallback: if backend DB is slow/unavailable in dev, try login-dev
+      const isTimeout = err?.code === 'ECONNABORTED';
+      const looksLikeMongoDown = typeof err?.message === 'string' && err.message.includes('timeout');
+      const devMode = !!import.meta.env.DEV;
+      const useDevAuth = devMode || import.meta.env.VITE_USE_DEV_AUTH === 'true';
+      console.warn('⚠️ Login failed, considering dev fallback:', { isTimeout, looksLikeMongoDown, devMode, useDevAuth });
 
-    if (response.data.success) {
-      this.setToken(response.data.data.token);
-      localStorage.setItem('ocp_user', JSON.stringify(response.data.data.user));
+      if (useDevAuth && (isTimeout || looksLikeMongoDown)) {
+        try {
+          const devResp = await this.api.post<AuthResponse>('/auth-jwt/login-dev', { email: credentials.email });
+          if (devResp.data.success) {
+            this.setToken(devResp.data.data.token);
+            localStorage.setItem('ocp_user', JSON.stringify(devResp.data.data.user));
+          }
+          return devResp.data;
+        } catch (devErr) {
+          console.error('❌ Dev login fallback failed:', devErr);
+          throw err;
+        }
+      }
+      throw err;
     }
-
-    return response.data;
   }
 
   // Méthode loginDev supprimée - mode développement retiré
@@ -168,7 +191,7 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
-    const response = await this.api.get<ApiResponse<{ user: User }>>('/auth/me');
+    const response = await this.api.get<ApiResponse<{ user: User }>>('/auth-jwt/me');
     return response.data;
   }
 
@@ -275,38 +298,54 @@ class ApiService {
 
   // Méthodes pour les secteurs
   async getAllSecteurs(siteId?: string): Promise<ApiResponse<Secteur[]>> {
-    const params = siteId ? `?siteId=${siteId}` : '';
-    const response = await this.api.get<ApiResponse<Secteur[]>>(`/org/secteurs${params}`);
+    if (siteId) {
+      return this.getSecteurs(siteId);
+    }
+    // If no siteId provided, get all secteurs across all sites
+    const response = await this.api.get<ApiResponse<Secteur[]>>('/org/secteurs');
     return response.data;
   }
 
   async getSecteurs(siteId: string): Promise<ApiResponse<Secteur[]>> {
-    const response = await this.api.get<ApiResponse<Secteur[]>>(`/org/sites/${siteId}/secteurs`);
+    // Check if siteId is actually a MongoDB ObjectId (24 hex chars) or a name
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(siteId);
+
+    if (isObjectId) {
+      // Use the standard endpoint with ObjectId
+      const response = await this.api.get<ApiResponse<Secteur[]>>(`/org/sites/${siteId}/secteurs`);
+      return response.data;
+    } else {
+      // Use the name-based endpoint
+      const response = await this.api.get<ApiResponse<Secteur[]>>(`/org/sites/by-name/${encodeURIComponent(siteId)}/secteurs`);
+      return response.data;
+    }
+  }
+
+  async getSecteurById(siteId: string, id: string): Promise<ApiResponse<Secteur>> {
+    const response = await this.api.get<ApiResponse<Secteur>>(`/org/sites/${siteId}/secteurs/${id}`);
     return response.data;
   }
 
-  async getSecteurById(id: string): Promise<ApiResponse<Secteur>> {
-    const response = await this.api.get<ApiResponse<Secteur>>(`/org/secteurs/${id}`);
+  // Legacy methods - use the new ones above instead
+  // These are kept for backward compatibility but redirect to the new methods
+  async createSecteurLegacy(data: CreateSecteurForm): Promise<ApiResponse<Secteur>> {
+    return this.createSecteur(data.site, data);
+  }
+
+  // Méthodes pour les services (3-level hierarchy: Sites → Secteurs → Services)
+  async getServices(siteId: string, secteurId: string): Promise<ApiResponse<Service[]>> {
+    const response = await this.api.get<ApiResponse<Service[]>>(`/org/sites/${siteId}/secteurs/${secteurId}/services`);
     return response.data;
   }
 
-  // async createSecteur(data: CreateSecteurForm): Promise<ApiResponse<Secteur>> {
-  //   const response = await this.api.post<ApiResponse<Secteur>>(`/org/sites/${data.site}/secteurs`, data);
-  //   return response.data;
-  // }
+  // Get all services (for admin users)
+  async getAllServices(): Promise<ApiResponse<Service[]>> {
+    const response = await this.api.get<ApiResponse<Service[]>>(`/org/services`);
+    return response.data;
+  }
 
-  // async updateSecteur(id: string, data: Partial<CreateSecteurForm>): Promise<ApiResponse<Secteur>> {
-  //   const response = await this.api.put<ApiResponse<Secteur>>(`/org/secteurs/${id}`, data);
-  //   return response.data;
-  // }
-
-  // async deleteSecteur(siteId: string, id: string): Promise<ApiResponse> {
-  //   const response = await this.api.delete<ApiResponse>(`/org/sites/${siteId}/secteurs/${id}`);
-  //   return response.data;
-  // }
-
-  // Méthodes pour les services
-  async getServices(params?: { siteId?: string; secteurId?: string }): Promise<ApiResponse<Service[]>> {
+  // Legacy method for backward compatibility
+  async getServicesLegacy(params?: { siteId?: string; secteurId?: string }): Promise<ApiResponse<Service[]>> {
     let url = '/org/services';
     if (params) {
       const queryParams = new URLSearchParams();
@@ -320,46 +359,101 @@ class ApiService {
     return response.data;
   }
 
-  // Admin methods for secteurs
-  async createSecteur(data: any): Promise<ApiResponse<Secteur>> {
-    const response = await this.api.post<ApiResponse<Secteur>>('/org/secteurs', data);
+  // Admin methods for secteurs (with proper site-based endpoints)
+  async createSecteur(siteId: string, data: CreateSecteurForm): Promise<ApiResponse<Secteur>> {
+    try {
+      const response = await this.api.post<ApiResponse<Secteur>>(`/org/sites/${siteId}/secteurs`, data);
+      return response.data;
+    } catch (error: any) {
+      // If creation fails due to existing inactive secteur, try to reactivate
+      if (error.response?.status === 409 && error.response?.data?.code === 'SECTEUR_EXISTS_INACTIVE') {
+        console.log('🔄 Secteur exists but is inactive, attempting reactivation...');
+        const inactiveSecteurId = error.response.data.data?.secteur?._id;
+        if (inactiveSecteurId) {
+          return this.activateSecteur(siteId, inactiveSecteurId);
+        }
+      }
+      throw error;
+    }
+  }
+
+  async updateSecteur(siteId: string, id: string, data: Partial<CreateSecteurForm>): Promise<ApiResponse<Secteur>> {
+    const response = await this.api.put<ApiResponse<Secteur>>(`/org/sites/${siteId}/secteurs/${id}`, data);
     return response.data;
   }
 
-  async updateSecteur(id: string, data: any): Promise<ApiResponse<Secteur>> {
-    const response = await this.api.put<ApiResponse<Secteur>>(`/org/secteurs/${id}`, data);
+  async deleteSecteur(siteId: string, id: string): Promise<ApiResponse<void>> {
+    const response = await this.api.delete<ApiResponse<void>>(`/org/sites/${siteId}/secteurs/${id}`);
     return response.data;
   }
 
-  async deleteSecteur(id: string): Promise<ApiResponse<void>> {
-    const response = await this.api.delete<ApiResponse<void>>(`/org/secteurs/${id}`);
+  // Activate secteur (reactivate if inactive)
+  async activateSecteur(siteId: string, id: string): Promise<ApiResponse<Secteur>> {
+    const response = await this.api.patch<ApiResponse<Secteur>>(`/org/sites/${siteId}/secteurs/${id}/activate`);
     return response.data;
   }
 
-  // Admin methods for services
-  // async createService(data: any): Promise<ApiResponse<Service>> {
-  //   const response = await this.api.post<ApiResponse<Service>>('/org/services', data);
-  //   return response.data;
-  // }
+  // Service CRUD methods (3-level hierarchy: Sites → Secteurs → Services)
+  async createService(siteId: string, secteurId: string, data: CreateServiceForm): Promise<ApiResponse<Service>> {
+    try {
+      const response = await this.api.post<ApiResponse<Service>>(`/org/sites/${siteId}/secteurs/${secteurId}/services`, data);
+      return response.data;
+    } catch (error: any) {
+      // If creation fails due to existing inactive service, try to reactivate
+      if (error.response?.status === 409 && error.response?.data?.code === 'SERVICE_EXISTS_INACTIVE') {
+        console.log('🔄 Service exists but is inactive, attempting reactivation...');
+        const inactiveServiceId = error.response.data.data?.service?._id;
+        if (inactiveServiceId) {
+          return this.activateService(siteId, secteurId, inactiveServiceId);
+        }
+      }
+      throw error;
+    }
+  }
 
-  // async updateService(id: string, data: any): Promise<ApiResponse<Service>> {
-  //   const response = await this.api.put<ApiResponse<Service>>(`/org/services/${id}`, data);
-  //   return response.data;
-  // }
+  async updateService(siteId: string, secteurId: string, id: string, data: Partial<CreateServiceForm>): Promise<ApiResponse<Service>> {
+    const response = await this.api.put<ApiResponse<Service>>(`/org/sites/${siteId}/secteurs/${secteurId}/services/${id}`, data);
+    return response.data;
+  }
 
-  // async deleteService(id: string): Promise<ApiResponse<void>> {
-  //   const response = await this.api.delete<ApiResponse<void>>(`/org/services/${id}`);
-  //   return response.data;
-  // }
+  async deleteService(siteId: string, secteurId: string, id: string): Promise<ApiResponse<void>> {
+    const response = await this.api.delete<ApiResponse<void>>(`/org/sites/${siteId}/secteurs/${secteurId}/services/${id}`);
+    return response.data;
+  }
 
+  // Activate service (reactivate if inactive)
+  async activateService(siteId: string, secteurId: string, id: string): Promise<ApiResponse<Service>> {
+    const response = await this.api.patch<ApiResponse<Service>>(`/org/sites/${siteId}/secteurs/${secteurId}/services/${id}/activate`);
+    return response.data;
+  }
+
+  // Legacy service methods (for backward compatibility)
   async getServicesBySecteur(secteurId: string): Promise<ApiResponse<Service[]>> {
-    const response = await this.api.get<ApiResponse<Service[]>>(`/org/secteurs/${secteurId}/services`);
-    // Return the services array directly from the nested data structure
-    return {
-      success: response.data.success,
-      message: response.data.message,
-      data: response.data.data || []
-    };
+    // Check if secteurId is actually a MongoDB ObjectId (24 hex chars) or a name
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(secteurId);
+
+    if (isObjectId) {
+      // Use the standard endpoint with ObjectId
+      const response = await this.api.get<ApiResponse<Service[]>>(`/org/secteurs/${secteurId}/services`);
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        data: response.data.data || []
+      };
+    } else {
+      // Use the name-based endpoint
+      const response = await this.api.get<ApiResponse<Service[]>>(`/org/secteurs/by-name/${encodeURIComponent(secteurId)}/services`);
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        data: response.data.data || []
+      };
+    }
+  }
+
+  // Legacy method - use createService(siteId, secteurId, data) instead
+  async createServiceLegacy(data: CreateServiceForm & { siteId: string }): Promise<ApiResponse<Service>> {
+    return this.createService(data.siteId, data.secteur, data);
   }
 
   async getServicesWithFilters(filters?: { siteId?: string; secteurId?: string }): Promise<ApiResponse<Service[]>> {
@@ -380,20 +474,7 @@ class ApiService {
     return response.data;
   }
 
-  async createService(data: CreateServiceForm): Promise<ApiResponse<Service>> {
-    const response = await this.api.post<ApiResponse<Service>>('/org/services', data);
-    return response.data;
-  }
-
-  async updateService(id: string, data: Partial<CreateServiceForm>): Promise<ApiResponse<Service>> {
-    const response = await this.api.put<ApiResponse<Service>>(`/org/services/${id}`, data);
-    return response.data;
-  }
-
-  async deleteService(id: string): Promise<ApiResponse> {
-    const response = await this.api.delete<ApiResponse>(`/org/services/${id}`);
-    return response.data;
-  }
+  // Legacy service methods removed - use the 3-level hierarchy methods instead
 
   // Méthodes pour les utilisateurs
   async getUsers(filters?: FilterOptions): Promise<ApiResponse<User[]>> {

@@ -60,20 +60,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
       setIsLoading(true);
+      console.log('🔐 Attempting login with:', { email: credentials.email, password: '***' });
+      console.log('🔐 API Base URL:', import.meta.env.VITE_API_URL || 'http://localhost:5050/api');
+
       const response = await apiService.login(credentials);
-      
+      console.log('🔐 Login response:', response);
+
       if (response.success) {
         setUser(response.data.user);
         setPermissions(response.data.permissions);
-        
+
+        console.log('✅ Login successful, user:', response.data.user);
         toast.success(`Bienvenue ${response.data.user.firstName} !`);
         return true;
       } else {
+        console.error('❌ Login failed:', response.message);
         toast.error(response.message || 'Erreur de connexion');
         return false;
       }
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Erreur de connexion';
+      console.error('❌ Login error:', error);
+      const message = error.response?.data?.message || error.message || 'Erreur de connexion';
       toast.error(message);
       return false;
     } finally {

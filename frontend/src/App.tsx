@@ -8,8 +8,7 @@ import Login from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
 
 import PlanningAstreinte from '@/pages/Planning/PlanningAstreinte';
-import { SitesPage, SecteurPage, ServicePage, SecteurDashboard } from "@/pages/Sites";
-import { UserManagement } from '@/pages/UserManagement';
+import { SitesPage, SecteurPage, ServicePage, SecteurDashboard, UserManagement } from "@/pages/Admin";
 import { MonSecteur as NewMonSecteur, MesIngenieurs } from '@/pages/ChefSecteur';
 import { MonService as NewMonService, MonEquipe } from '@/pages/ChefService';
 

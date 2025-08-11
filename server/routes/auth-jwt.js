@@ -26,8 +26,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Rechercher l'utilisateur avec ses relations
+    // Rechercher l'utilisateur avec ses relations (inclure le password pour la vérification)
     const user = await User.findOne({ email, isActive: true })
+      .select('+password') // Explicitly include password field
       .populate('site', 'name code')
       .populate('secteur', 'name code site')
       .populate('service', 'name code secteur');

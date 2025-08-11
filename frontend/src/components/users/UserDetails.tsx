@@ -29,7 +29,43 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
   onEdit,
   canEdit = false
 }) => {
-  if (!isOpen || !user) return null;
+  if (!isOpen || !user) {
+    return null;
+  }
+
+  // Helper function to get user's display name
+  const getUserDisplayName = (user: any) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.fullName) {
+      return user.fullName;
+    }
+    if (user.name) {
+      return user.name;
+    }
+    return user.email || 'Utilisateur';
+  };
+
+  // Helper function to get user initials
+  const getUserInitials = (user: any) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+    }
+    if (user.fullName) {
+      const parts = user.fullName.split(' ');
+      return parts.length >= 2
+        ? `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`
+        : user.fullName.charAt(0);
+    }
+    if (user.name) {
+      const parts = user.name.split(' ');
+      return parts.length >= 2
+        ? `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`
+        : user.name.charAt(0);
+    }
+    return user.email ? user.email.charAt(0).toUpperCase() : 'U';
+  };
 
   const getRoleLabel = (role: string) => {
     const labels = {
@@ -82,13 +118,13 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
             <div className="flex-shrink-0 h-16 w-16">
               <div className="h-16 w-16 rounded-full bg-ocp-primary flex items-center justify-center">
                 <span className="text-white font-medium text-xl">
-                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                  {getUserInitials(user)}
                 </span>
               </div>
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-semibold text-gray-900">
-                {user.firstName} {user.lastName}
+                {getUserDisplayName(user)}
               </h3>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
