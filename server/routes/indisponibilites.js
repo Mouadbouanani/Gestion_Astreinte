@@ -1,0 +1,32 @@
+import express from 'express';
+// Use the same JWT middleware as auth-jwt routes to avoid token format mismatch
+import { authenticateToken } from '../middleware/jwt-auth.js';
+import {
+  createIndisponibilite,
+  getMesIndisponibilites,
+  getIndisponibilites,
+  approuverIndisponibilite,
+  refuserIndisponibilite,
+  annulerIndisponibilite
+} from '../controllers/indisponibiliteController.js';
+
+const router = express.Router();
+
+// Submit an unavailability (self)
+router.post('/', authenticateToken, createIndisponibilite);
+
+// List my unavailabilities
+router.get('/my', authenticateToken, getMesIndisponibilites);
+
+// List (managers)
+router.get('/', authenticateToken, getIndisponibilites);
+
+// Approve/Reject
+router.patch('/:id/approve', authenticateToken, approuverIndisponibilite);
+router.patch('/:id/reject', authenticateToken, refuserIndisponibilite);
+
+// Cancel (owner or admin)
+router.patch('/:id/cancel', authenticateToken, annulerIndisponibilite);
+
+export default router;
+

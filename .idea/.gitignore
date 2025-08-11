@@ -1,0 +1,25 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+/dataSources.local.json
+# Project-specific ignored files
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
+/.idea/inspectionProfiles/
+/.idea/datasources/
+/.server/node_modules/
+
+
+# Node.js
+server/node_modules/
+frontend/node_modules/
+# Dist / build output
+server/dist/
+server/dist/Server.js

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CRUD OCP - IDs Réels</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-info { background-color: #17a2b8; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-success:hover { background-color: #1e7e34; }
+        .btn-info:hover { background-color: #117a8b; }
+        .btn-warning:hover { background-color: #e0a800; }
+        .btn-danger:hover { background-color: #c82333; }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-inline {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-inline .form-group {
+            flex: 1;
+        }
+        .id-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test CRUD OCP - IDs Réels</h1>
+        
+        <!-- IDs de référence -->
+        <div class="section">
+            <h2>📋 IDs de Référence</h2>
+            <div class="id-display">
+                <strong>Sites OCP:</strong><br>
+                • Casablanca: 688550090c4c8dfeb9c74e81<br>
+                • Jorf Lasfar: 688550090c4c8dfeb9c74e82<br>
+                • Khouribga: 688550090c4c8dfeb9c74e83<br>
+                • Benguerir: 688550090c4c8dfeb9c74e87<br><br>
+                
+                <strong>Secteurs Casablanca:</strong><br>
+                • Traitement: 688550090c4c8dfeb9c74e8e<br>
+                • Extraction: 688550090c4c8dfeb9c74e8f<br>
+                • Maintenance: 688550090c4c8dfeb9c74e90<br><br>
+                
+                <strong>Services Traitement Casablanca:</strong><br>
+                • Production U1: 688550090c4c8dfeb9c74eb7<br>
+                • Production U2: 688550090c4c8dfeb9c74eb8<br>
+                • Contrôle Qualité: 688550090c4c8dfeb9c74eb9
+            </div>
+        </div>
+
+        <!-- Tests Sites -->
+        <div class="section">
+            <h2>🏭 Tests CRUD Sites</h2>
+            <div class="button-group">
+                <button class="btn-info" onclick="getSite()">📖 GET Site Casablanca</button>
+                <button class="btn-success" onclick="showCreateSiteForm()">➕ CREATE Site</button>
+                <button class="btn-warning" onclick="showUpdateSiteForm()">✏️ UPDATE Site</button>
+                <button class="btn-danger" onclick="deleteSite()">❌ DELETE Site (Test)</button>
+            </div>
+            
+            <div id="createSiteForm" style="display: none;">
+                <h3>Créer un nouveau site</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Nom:</label>
+                        <input type="text" id="newSiteName" value="Tarfaya">
+                    </div>
+                    <div class="form-group">
+                        <label>Code:</label>
+                        <input type="text" id="newSiteCode" value="TAR">
+                    </div>
+                    <div class="form-group">
+                        <label>Adresse:</label>
+                        <input type="text" id="newSiteAddress" value="Zone Industrielle de Tarfaya, Tarfaya 82000">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-success" onclick="createSite()">Créer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="updateSiteForm" style="display: none;">
+                <h3>Mettre à jour site Casablanca</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Nouveau nom:</label>
+                        <input type="text" id="updateSiteName" value="Casablanca Industrial Complex">
+                    </div>
+                    <div class="form-group">
+                        <label>Nouvelle adresse:</label>
+                        <input type="text" id="updateSiteAddress" value="Zone Industrielle Ain Sebaa, Casablanca 20250, Maroc">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-warning" onclick="updateSite()">Mettre à jour</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="sitesResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests Secteurs -->
+        <div class="section">
+            <h2>🔧 Tests CRUD Secteurs</h2>
+            <div class="button-group">
+                <button class="btn-info" onclick="getSecteurs()">📖 GET Secteurs Casablanca</button>
+                <button class="btn-info" onclick="getSecteur()">📖 GET Secteur Traitement</button>
+                <button class="btn-success" onclick="showCreateSecteurForm()">➕ CREATE Secteur</button>
+                <button class="btn-warning" onclick="showUpdateSecteurForm()">✏️ UPDATE Secteur</button>
+            </div>
+            
+            <div id="createSecteurForm" style="display: none;">
+                <h3>Créer secteur pour Casablanca</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Secteur:</label>
+                        <select id="newSecteurName">
+                            <option value="Traitement">Traitement</option>
+                            <option value="Extraction">Extraction</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Logistique">Logistique</option>
+                            <option value="Qualité">Qualité</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Code (optionnel):</label>
+                        <input type="text" id="newSecteurCode" placeholder="Auto-généré">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-success" onclick="createSecteur()">Créer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="updateSecteurForm" style="display: none;">
+                <h3>Mettre à jour secteur Traitement</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Nouveau nom:</label>
+                        <input type="text" id="updateSecteurName" value="Traitement Avancé">
+                    </div>
+                    <div class="form-group">
+                        <label>Nouveau code:</label>
+                        <input type="text" id="updateSecteurCode" value="CAS_TRAIT_ADV">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-warning" onclick="updateSecteur()">Mettre à jour</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="secteursResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests Services -->
+        <div class="section">
+            <h2>👥 Tests CRUD Services</h2>
+            <div class="button-group">
+                <button class="btn-info" onclick="getServices()">📖 GET Services Traitement</button>
+                <button class="btn-info" onclick="getService()">📖 GET Service Production U1</button>
+                <button class="btn-success" onclick="showCreateServiceForm()">➕ CREATE Service</button>
+                <button class="btn-warning" onclick="showUpdateServiceForm()">✏️ UPDATE Service</button>
+            </div>
+            
+            <div id="createServiceForm" style="display: none;">
+                <h3>Créer service pour secteur Traitement</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Service:</label>
+                        <select id="newServiceName">
+                            <option value="Production U1">Production U1</option>
+                            <option value="Production U2">Production U2</option>
+                            <option value="Contrôle Qualité">Contrôle Qualité</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Code (optionnel):</label>
+                        <input type="text" id="newServiceCode" placeholder="Auto-généré">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-success" onclick="createService()">Créer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="updateServiceForm" style="display: none;">
+                <h3>Mettre à jour service Production U1</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Nouveau nom:</label>
+                        <input type="text" id="updateServiceName" value="Production U1 Modernisée">
+                    </div>
+                    <div class="form-group">
+                        <label>Nouveau code:</label>
+                        <input type="text" id="updateServiceCode" value="CAS_TRAIT_U1_MOD">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-warning" onclick="updateService()">Mettre à jour</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="servicesResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests de Validation -->
+        <div class="section">
+            <h2>⚠️ Tests de Validation (Erreurs)</h2>
+            <div class="button-group">
+                <button class="btn-danger" onclick="testInvalidSiteCode()">❌ Code Site Invalide</button>
+                <button class="btn-danger" onclick="testInvalidSecteurName()">❌ Secteur Invalide</button>
+                <button class="btn-danger" onclick="testInvalidServiceName()">❌ Service Invalide</button>
+            </div>
+            <div id="validationResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050/api/org';
+        
+        // IDs réels
+        const IDS = {
+            casablanca: '688550090c4c8dfeb9c74e81',
+            secteurTraitement: '688550090c4c8dfeb9c74e8e',
+            serviceProductionU1: '688550090c4c8dfeb9c74eb7'
+        };
+        
+        // Utility functions
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { data, isError: !response.ok };
+            } catch (error) {
+                return { data: { error: error.message }, isError: true };
+            }
+        }
+        
+        // Sites functions
+        async function getSite() {
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}`);
+            showResult('sitesResult', data, isError);
+        }
+        
+        function showCreateSiteForm() {
+            const form = document.getElementById('createSiteForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function showUpdateSiteForm() {
+            const form = document.getElementById('updateSiteForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        async function createSite() {
+            const name = document.getElementById('newSiteName').value;
+            const code = document.getElementById('newSiteCode').value;
+            const address = document.getElementById('newSiteAddress').value;
+            
+            const { data, isError } = await apiCall('/sites', {
+                method: 'POST',
+                body: JSON.stringify({ name, code, address })
+            });
+            
+            showResult('sitesResult', data, isError);
+        }
+        
+        async function updateSite() {
+            const name = document.getElementById('updateSiteName').value;
+            const address = document.getElementById('updateSiteAddress').value;
+            
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, address })
+            });
+            
+            showResult('sitesResult', data, isError);
+        }
+        
+        async function deleteSite() {
+            if (!confirm('Êtes-vous sûr de vouloir tester la suppression ?')) return;
+            
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}`, {
+                method: 'DELETE'
+            });
+            
+            showResult('sitesResult', data, isError);
+        }
+        
+        // Secteurs functions
+        async function getSecteurs() {
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}/secteurs`);
+            showResult('secteursResult', data, isError);
+        }
+        
+        async function getSecteur() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}`);
+            showResult('secteursResult', data, isError);
+        }
+        
+        function showCreateSecteurForm() {
+            const form = document.getElementById('createSecteurForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function showUpdateSecteurForm() {
+            const form = document.getElementById('updateSecteurForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        async function createSecteur() {
+            const name = document.getElementById('newSecteurName').value;
+            const code = document.getElementById('newSecteurCode').value;
+            
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({ name, code })
+            });
+            
+            showResult('secteursResult', data, isError);
+        }
+        
+        async function updateSecteur() {
+            const name = document.getElementById('updateSecteurName').value;
+            const code = document.getElementById('updateSecteurCode').value;
+            
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, code })
+            });
+            
+            showResult('secteursResult', data, isError);
+        }
+        
+        // Services functions
+        async function getServices() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}/services`);
+            showResult('servicesResult', data, isError);
+        }
+        
+        async function getService() {
+            const { data, isError } = await apiCall(`/services/${IDS.serviceProductionU1}`);
+            showResult('servicesResult', data, isError);
+        }
+        
+        function showCreateServiceForm() {
+            const form = document.getElementById('createServiceForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function showUpdateServiceForm() {
+            const form = document.getElementById('updateServiceForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        async function createService() {
+            const name = document.getElementById('newServiceName').value;
+            const code = document.getElementById('newServiceCode').value;
+            
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}/services`, {
+                method: 'POST',
+                body: JSON.stringify({ name, code })
+            });
+            
+            showResult('servicesResult', data, isError);
+        }
+        
+        async function updateService() {
+            const name = document.getElementById('updateServiceName').value;
+            const code = document.getElementById('updateServiceCode').value;
+            
+            const { data, isError } = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, code })
+            });
+            
+            showResult('servicesResult', data, isError);
+        }
+        
+        // Validation tests
+        async function testInvalidSiteCode() {
+            const { data, isError } = await apiCall('/sites', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Test Site',
+                    code: 'TOOLONG',
+                    address: 'Test Address'
+                })
+            });
+            
+            showResult('validationResult', data, isError);
+        }
+        
+        async function testInvalidSecteurName() {
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'InvalidSector'
+                })
+            });
+            
+            showResult('validationResult', data, isError);
+        }
+        
+        async function testInvalidServiceName() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}/services`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'InvalidService'
+                })
+            });
+            
+            showResult('validationResult', data, isError);
+        }
+    </script>
+</body>
+</html>

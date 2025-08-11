@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test JWT Automatique - OCP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-section {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .user-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .user-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .user-btn.admin { background: #dc3545; color: white; }
+        .user-btn.chef_site { background: #fd7e14; color: white; }
+        .user-btn.chef_secteur { background: #ffc107; color: black; }
+        .user-btn.ingenieur { background: #20c997; color: white; }
+        .user-btn.chef_service { background: #0dcaf0; color: black; }
+        .user-btn.collaborateur { background: #6f42c1; color: white; }
+        
+        .token-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            word-break: break-all;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-create { background-color: #28a745; color: white; }
+        .btn-update { background-color: #ffc107; color: black; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-read { background-color: #17a2b8; color: white; }
+        .btn-login { background-color: #007bff; color: white; }
+        
+        .btn-create:hover { background-color: #1e7e34; }
+        .btn-update:hover { background-color: #e0a800; }
+        .btn-delete:hover { background-color: #c82333; }
+        .btn-read:hover { background-color: #117a8b; }
+        .btn-login:hover { background-color: #0056b3; }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .current-user {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .logic-explanation {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeaa7;
+        }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test JWT Automatique - Logique Métier OCP</h1>
+        
+        <!-- Section de connexion -->
+        <div class="login-section">
+            <h3>🚪 Connexion Automatique</h3>
+            <div class="user-buttons">
+                <button class="user-btn admin" onclick="loginUser('y.bennani@ocp.ma', 'admin')">🔴 Admin</button>
+                <button class="user-btn chef_site" onclick="loginUser('h.alami@ocp.ma', 'chef_site')">🟠 Chef Site</button>
+                <button class="user-btn chef_secteur" onclick="loginUser('m.tazi@ocp.ma', 'chef_secteur')">🟡 Chef Secteur</button>
+                <button class="user-btn ingenieur" onclick="loginUser('a.benali@ocp.ma', 'ingenieur')">🟢 Ingénieur</button>
+                <button class="user-btn chef_service" onclick="loginUser('r.amrani@ocp.ma', 'chef_service')">🔵 Chef Service</button>
+                <button class="user-btn collaborateur" onclick="loginUser('f.idrissi@ocp.ma', 'collaborateur')">🟣 Collaborateur</button>
+            </div>
+            <div class="current-user" id="currentUser">
+                Aucun utilisateur connecté
+            </div>
+            <div class="token-display" id="tokenDisplay" style="display: none;">
+                Token: <span id="tokenValue"></span>
+            </div>
+        </div>
+
+        <!-- Explication de la logique métier -->
+        <div class="section">
+            <h2>🧠 Logique Métier Automatique</h2>
+            <div class="logic-explanation">
+                <strong>🎯 Chef Service:</strong><br>
+                • ✅ <strong>SON service</strong> → Gestion complète (collaborateurs + planning)<br>
+                • 👁️ <strong>Autres services</strong> → Lecture seule (consultation planning)<br><br>
+                
+                <strong>🎯 Chef Secteur/Ingénieur:</strong><br>
+                • ✅ <strong>LEUR secteur</strong> → Gestion complète<br>
+                • 👁️ <strong>Autres secteurs</strong> → Lecture seule<br><br>
+                
+                <strong>🔐 Plus besoin de saisir l'email - Le token contient tout !</strong>
+            </div>
+        </div>
+
+        <!-- Tests Services -->
+        <div class="section">
+            <h2>🔧 Tests Services (Logique Chef Service)</h2>
+            <div class="button-group">
+                <button class="btn-read" onclick="testReadOwnService()">👁️ Consulter MON Service</button>
+                <button class="btn-update" onclick="testUpdateOwnService()">✏️ Modifier MON Service</button>
+                <button class="btn-read" onclick="testReadOtherService()">👁️ Consulter AUTRE Service</button>
+                <button class="btn-update" onclick="testUpdateOtherService()">❌ Modifier AUTRE Service</button>
+            </div>
+            <div id="serviceResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests Secteurs -->
+        <div class="section">
+            <h2>🏭 Tests Secteurs (Logique Chef Secteur)</h2>
+            <div class="button-group">
+                <button class="btn-read" onclick="testReadOwnSecteur()">👁️ Consulter MON Secteur</button>
+                <button class="btn-update" onclick="testUpdateOwnSecteur()">✏️ Modifier MON Secteur</button>
+                <button class="btn-read" onclick="testReadOtherSecteur()">👁️ Consulter AUTRE Secteur</button>
+                <button class="btn-update" onclick="testUpdateOtherSecteur()">❌ Modifier AUTRE Secteur</button>
+            </div>
+            <div id="secteurResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests Création -->
+        <div class="section">
+            <h2>➕ Tests Création (Selon Permissions)</h2>
+            <div class="button-group">
+                <button class="btn-create" onclick="testCreateSecteur()">➕ Créer Secteur</button>
+                <button class="btn-create" onclick="testCreateService()">➕ Créer Service</button>
+            </div>
+            <div id="createResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Informations utilisateur -->
+        <div class="section">
+            <h2>👤 Informations Utilisateur</h2>
+            <div class="button-group">
+                <button class="btn-read" onclick="getUserInfo()">📋 Mes Infos</button>
+                <button class="btn-read" onclick="refreshToken()">🔄 Rafraîchir Token</button>
+            </div>
+            <div id="userResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050/api';
+        
+        // IDs réels
+        const IDS = {
+            casablanca: '688550090c4c8dfeb9c74e81',
+            jorfLasfar: '688550090c4c8dfeb9c74e82',
+            secteurTraitement: '688550090c4c8dfeb9c74e8e',
+            secteurExtraction: '688550090c4c8dfeb9c74e8f',
+            serviceProductionU1: '688550090c4c8dfeb9c74eb7',
+            serviceProductionU2: '688550090c4c8dfeb9c74eb8'
+        };
+        
+        let currentToken = null;
+        let currentUserData = null;
+        
+        // Connexion automatique
+        async function loginUser(email, role) {
+            try {
+                const response = await fetch(`${API_BASE}/auth-jwt/login-dev`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentToken = data.data.token;
+                    currentUserData = data.data.user;
+                    
+                    // Mettre à jour l'affichage
+                    document.getElementById('currentUser').textContent = 
+                        `✅ Connecté: ${currentUserData.firstName} ${currentUserData.lastName} (${currentUserData.role})`;
+                    
+                    document.getElementById('tokenDisplay').style.display = 'block';
+                    document.getElementById('tokenValue').textContent = currentToken.substring(0, 50) + '...';
+                    
+                    // Activer les boutons de test
+                    enableTestButtons();
+                    
+                    showResult('userResult', {
+                        message: 'Connexion réussie',
+                        user: currentUserData,
+                        permissions: data.data.permissions
+                    });
+                } else {
+                    showResult('userResult', data, true);
+                }
+                
+            } catch (error) {
+                showResult('userResult', { error: error.message }, true);
+            }
+        }
+        
+        function enableTestButtons() {
+            document.querySelectorAll('button:not(.user-btn)').forEach(btn => {
+                btn.classList.remove('disabled');
+            });
+        }
+        
+        async function apiCall(url, options = {}) {
+            if (!currentToken) {
+                return { data: { message: 'Veuillez vous connecter d\'abord' }, isError: true, status: 401 };
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`,
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { data, isError: !response.ok, status: response.status };
+            } catch (error) {
+                return { data: { error: error.message }, isError: true, status: 0 };
+            }
+        }
+        
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        // Tests Services
+        async function testReadOwnService() {
+            const serviceId = currentUserData?.service?._id || IDS.serviceProductionU1;
+            const result = await apiCall(`/org/services/${serviceId}`);
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        async function testUpdateOwnService() {
+            const serviceId = currentUserData?.service?._id || IDS.serviceProductionU1;
+            const result = await apiCall(`/org/services/${serviceId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Production U1',
+                    code: 'CAS_U1_UPD'
+                })
+            });
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        async function testReadOtherService() {
+            const otherServiceId = IDS.serviceProductionU2;
+            const result = await apiCall(`/org/services/${otherServiceId}`);
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        async function testUpdateOtherService() {
+            const otherServiceId = IDS.serviceProductionU2;
+            const result = await apiCall(`/org/services/${otherServiceId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Production U2',
+                    code: 'CAS_U2_UPD'
+                })
+            });
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        // Tests Secteurs
+        async function testReadOwnSecteur() {
+            const secteurId = currentUserData?.secteur?._id || IDS.secteurTraitement;
+            const result = await apiCall(`/org/secteurs/${secteurId}`);
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        async function testUpdateOwnSecteur() {
+            const secteurId = currentUserData?.secteur?._id || IDS.secteurTraitement;
+            const result = await apiCall(`/org/secteurs/${secteurId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Traitement',
+                    code: 'CAS_TRAIT_UPD'
+                })
+            });
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        async function testReadOtherSecteur() {
+            const otherSecteurId = IDS.secteurExtraction;
+            const result = await apiCall(`/org/secteurs/${otherSecteurId}`);
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        async function testUpdateOtherSecteur() {
+            const otherSecteurId = IDS.secteurExtraction;
+            const result = await apiCall(`/org/secteurs/${otherSecteurId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Extraction',
+                    code: 'CAS_EXTR_UPD'
+                })
+            });
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        // Tests Création
+        async function testCreateSecteur() {
+            const result = await apiCall(`/org/sites/${IDS.casablanca}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Maintenance',
+                    code: `TEST_${Date.now()}`
+                })
+            });
+            showResult('createResult', result, result.isError);
+        }
+        
+        async function testCreateService() {
+            const secteurId = currentUserData?.secteur?._id || IDS.secteurTraitement;
+            const result = await apiCall(`/org/secteurs/${secteurId}/services`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Contrôle Qualité',
+                    code: `SRV_${Date.now()}`
+                })
+            });
+            showResult('createResult', result, result.isError);
+        }
+        
+        // Informations utilisateur
+        async function getUserInfo() {
+            const result = await apiCall('/auth-jwt/me');
+            showResult('userResult', result, result.isError);
+        }
+        
+        async function refreshToken() {
+            const result = await apiCall('/auth-jwt/refresh', { method: 'POST' });
+            if (!result.isError) {
+                currentToken = result.data.data.token;
+                document.getElementById('tokenValue').textContent = currentToken.substring(0, 50) + '...';
+            }
+            showResult('userResult', result, result.isError);
+        }
+        
+        // Désactiver les boutons au démarrage
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('button:not(.user-btn)').forEach(btn => {
+                btn.classList.add('disabled');
+            });
+        });
+    </script>
+</body>
+</html>

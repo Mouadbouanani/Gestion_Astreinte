@@ -1,0 +1,154 @@
+{
+  "sites": {
+    "casablanca_id": "688550090c4c8dfeb9c74e81",
+    "jorf_lasfar_id": "688550090c4c8dfeb9c74e82",
+    "khouribga_id": "688550090c4c8dfeb9c74e83",
+    "benguerir_id": "688550090c4c8dfeb9c74e87",
+    
+    "create_site": {
+      "url": "POST http://localhost:5050/api/org/sites",
+      "body": {
+        "name": "Tarfaya",
+        "code": "TAR",
+        "address": "Zone Industrielle de Tarfaya, Tarfaya 82000"
+      }
+    },
+    
+    "update_site": {
+      "url": "PUT http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81",
+      "body": {
+        "name": "Casablanca Industrial Complex",
+        "address": "Zone Industrielle Ain Sebaa, Casablanca 20250, Maroc",
+        "isActive": true
+      }
+    },
+    
+    "get_site": {
+      "url": "GET http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81"
+    },
+    
+    "delete_site": {
+      "url": "DELETE http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81"
+    }
+  },
+  
+  "secteurs": {
+    "casablanca_traitement_id": "688550090c4c8dfeb9c74e8e",
+    "casablanca_extraction_id": "688550090c4c8dfeb9c74e8f",
+    "casablanca_maintenance_id": "688550090c4c8dfeb9c74e90",
+    
+    "create_secteur": {
+      "url": "POST http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81/secteurs",
+      "body": {
+        "name": "Traitement",
+        "code": "CAS_TRAIT_NEW"
+      }
+    },
+    
+    "update_secteur": {
+      "url": "PUT http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e",
+      "body": {
+        "name": "Traitement",
+        "code": "CAS_TRAIT_UPD",
+        "isActive": true
+      }
+    },
+    
+    "get_secteurs_by_site": {
+      "url": "GET http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81/secteurs"
+    },
+    
+    "get_secteur": {
+      "url": "GET http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e"
+    },
+    
+    "delete_secteur": {
+      "url": "DELETE http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e"
+    }
+  },
+  
+  "services": {
+    "casablanca_production_u1_id": "688550090c4c8dfeb9c74eb7",
+    "casablanca_production_u2_id": "688550090c4c8dfeb9c74eb8",
+    "casablanca_controle_qualite_id": "688550090c4c8dfeb9c74eb9",
+    
+    "create_service": {
+      "url": "POST http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e/services",
+      "body": {
+        "name": "Production U1",
+        "code": "CAS_TRAIT_U1_NEW"
+      }
+    },
+    
+    "update_service": {
+      "url": "PUT http://localhost:5050/api/org/services/688550090c4c8dfeb9c74eb7",
+      "body": {
+        "name": "Production U1 Modernisée",
+        "code": "CAS_TRAIT_U1_MOD",
+        "isActive": true
+      }
+    },
+    
+    "get_services_by_secteur": {
+      "url": "GET http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e/services"
+    },
+    
+    "get_service": {
+      "url": "GET http://localhost:5050/api/org/services/688550090c4c8dfeb9c74eb7"
+    },
+    
+    "delete_service": {
+      "url": "DELETE http://localhost:5050/api/org/services/688550090c4c8dfeb9c74eb7"
+    }
+  },
+  
+  "curl_examples": {
+    "create_site": "curl -X POST http://localhost:5050/api/org/sites -H \"Content-Type: application/json\" -d '{\"name\": \"Tarfaya\", \"code\": \"TAR\", \"address\": \"Zone Industrielle de Tarfaya, Tarfaya 82000\"}'",
+    
+    "update_site": "curl -X PUT http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81 -H \"Content-Type: application/json\" -d '{\"name\": \"Casablanca Updated\", \"address\": \"Nouvelle adresse\"}'",
+    
+    "create_secteur": "curl -X POST http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81/secteurs -H \"Content-Type: application/json\" -d '{\"name\": \"Maintenance\"}'",
+    
+    "update_secteur": "curl -X PUT http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e -H \"Content-Type: application/json\" -d '{\"name\": \"Traitement Avancé\", \"code\": \"CAS_TRAIT_ADV\"}'",
+    
+    "create_service": "curl -X POST http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e/services -H \"Content-Type: application/json\" -d '{\"name\": \"Production U1\"}'",
+    
+    "update_service": "curl -X PUT http://localhost:5050/api/org/services/688550090c4c8dfeb9c74eb7 -H \"Content-Type: application/json\" -d '{\"name\": \"Production U1 Modernisée\", \"code\": \"CAS_TRAIT_U1_MOD\"}'",
+    
+    "get_hierarchy": "curl -X GET http://localhost:5050/api/org/sites/hierarchy",
+    
+    "get_sites": "curl -X GET http://localhost:5050/api/org/sites",
+    
+    "get_secteurs": "curl -X GET http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81/secteurs",
+    
+    "get_services": "curl -X GET http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e/services"
+  },
+  
+  "validation_tests": {
+    "invalid_site_code": {
+      "url": "POST http://localhost:5050/api/org/sites",
+      "body": {
+        "name": "Test Site",
+        "code": "TOOLONG",
+        "address": "Test Address"
+      },
+      "expected_error": "Le code doit contenir 3-4 lettres majuscules"
+    },
+    
+    "invalid_secteur_name": {
+      "url": "POST http://localhost:5050/api/org/sites/688550090c4c8dfeb9c74e81/secteurs",
+      "body": {
+        "name": "InvalidSector"
+      },
+      "expected_error": "Nom de secteur invalide"
+    },
+    
+    "invalid_service_name": {
+      "url": "POST http://localhost:5050/api/org/secteurs/688550090c4c8dfeb9c74e8e/services",
+      "body": {
+        "name": "InvalidService"
+      },
+      "expected_error": "Nom de service invalide"
+    }
+  }
+}

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test DELETE & PUT - OCP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-info { background-color: #17a2b8; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        
+        .btn-warning:hover { background-color: #e0a800; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-info:hover { background-color: #117a8b; }
+        .btn-success:hover { background-color: #1e7e34; }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-inline {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-inline .form-group {
+            flex: 1;
+        }
+        .id-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Test Autorisation Hiérarchique OCP</h1>
+        
+        <!-- IDs de référence -->
+        <div class="section">
+            <h2>📋 IDs de Test</h2>
+            <div class="id-display">
+                <strong>Sites OCP:</strong><br>
+                • Casablanca: 688550090c4c8dfeb9c74e81<br>
+                • Jorf Lasfar: 688550090c4c8dfeb9c74e82<br><br>
+                
+                <strong>Secteurs Casablanca:</strong><br>
+                • Traitement: 688550090c4c8dfeb9c74e8e<br>
+                • Extraction: 688550090c4c8dfeb9c74e8f<br><br>
+                
+                <strong>Services Traitement:</strong><br>
+                • Production U1: 688550090c4c8dfeb9c74eb7<br>
+                • Production U2: 688550090c4c8dfeb9c74eb8
+            </div>
+        </div>
+
+        <!-- Tests PUT Secteurs -->
+        <div class="section">
+            <h2>✏️ Tests PUT Secteurs</h2>
+            <div class="button-group">
+                <button class="btn-warning" onclick="putSecteurValid()">✏️ PUT Secteur Valide</button>
+                <button class="btn-danger" onclick="putSecteurInvalid()">❌ PUT Secteur Invalide</button>
+                <button class="btn-info" onclick="getSecteurBefore()">📖 Voir Secteur Avant</button>
+            </div>
+            
+            <div class="warning">
+                ⚠️ Le PUT va modifier le secteur Traitement de Casablanca
+            </div>
+            
+            <div id="putSecteurForm" style="display: none;">
+                <h3>Modifier secteur Traitement</h3>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label>Nouveau nom:</label>
+                        <input type="text" id="putSecteurName" value="Traitement">
+                    </div>
+                    <div class="form-group">
+                        <label>Nouveau code:</label>
+                        <input type="text" id="putSecteurCode" value="CAS_TRAIT_UPD">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-warning" onclick="putSecteurCustom()">Modifier</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="putSecteurResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests DELETE Secteurs -->
+        <div class="section">
+            <h2>❌ Tests DELETE Secteurs</h2>
+            <div class="button-group">
+                <button class="btn-success" onclick="createTestSecteur()">➕ Créer Secteur Test</button>
+                <button class="btn-danger" onclick="deleteSecteurWithUsers()">❌ DELETE avec Utilisateurs</button>
+                <button class="btn-danger" onclick="deleteSecteurEmpty()">❌ DELETE Secteur Vide</button>
+                <button class="btn-info" onclick="listSecteurs()">📋 Lister Secteurs</button>
+            </div>
+            
+            <div class="warning">
+                ⚠️ Les tests DELETE utilisent la nouvelle route: /sites/:siteId/secteurs/:id
+            </div>
+            
+            <div id="deleteSecteurResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests PUT Services -->
+        <div class="section">
+            <h2>✏️ Tests PUT Services</h2>
+            <div class="button-group">
+                <button class="btn-warning" onclick="putServiceValid()">✏️ PUT Service Valide</button>
+                <button class="btn-danger" onclick="putServiceInvalid()">❌ PUT Service Invalide</button>
+                <button class="btn-info" onclick="getServiceBefore()">📖 Voir Service Avant</button>
+            </div>
+            
+            <div class="warning">
+                ⚠️ Le PUT va modifier le service Production U1
+            </div>
+            
+            <div id="putServiceResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests DELETE Services -->
+        <div class="section">
+            <h2>❌ Tests DELETE Services</h2>
+            <div class="button-group">
+                <button class="btn-success" onclick="createTestService()">➕ Créer Service Test</button>
+                <button class="btn-danger" onclick="deleteServiceWithUsers()">❌ DELETE avec Utilisateurs</button>
+                <button class="btn-danger" onclick="deleteServiceEmpty()">❌ DELETE Service Vide</button>
+                <button class="btn-info" onclick="listServices()">📋 Lister Services</button>
+            </div>
+            
+            <div id="deleteServiceResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Résultats Globaux -->
+        <div class="section">
+            <h2>📊 État Global</h2>
+            <div class="button-group">
+                <button class="btn-info" onclick="getHierarchy()">🌳 Hiérarchie Complète</button>
+                <button class="btn-success" onclick="resetTestData()">🔄 Reset Données Test</button>
+            </div>
+            <div id="globalResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050/api/org';
+        
+        // IDs réels
+        const IDS = {
+            casablanca: '688550090c4c8dfeb9c74e81',
+            jorfLasfar: '688550090c4c8dfeb9c74e82',
+            secteurTraitement: '688550090c4c8dfeb9c74e8e',
+            secteurExtraction: '688550090c4c8dfeb9c74e8f',
+            serviceProductionU1: '688550090c4c8dfeb9c74eb7',
+            serviceProductionU2: '688550090c4c8dfeb9c74eb8'
+        };
+        
+        let testSecteurId = null;
+        let testServiceId = null;
+        
+        // Utility functions
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { data, isError: !response.ok, status: response.status };
+            } catch (error) {
+                return { data: { error: error.message }, isError: true, status: 0 };
+            }
+        }
+        
+        // PUT Secteurs Tests
+        async function getSecteurBefore() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}`);
+            showResult('putSecteurResult', data, isError);
+        }
+        
+        async function putSecteurValid() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Traitement',
+                    code: 'CAS_TRAIT_UPD',
+                    isActive: true
+                })
+            });
+            showResult('putSecteurResult', data, isError);
+        }
+        
+        async function putSecteurInvalid() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'InvalidSecteur',
+                    code: 'INVALID'
+                })
+            });
+            showResult('putSecteurResult', data, isError);
+        }
+        
+        // DELETE Secteurs Tests
+        async function createTestSecteur() {
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Maintenance',
+                    code: 'CAS_MAINT_TEST'
+                })
+            });
+            
+            if (!isError && data.data) {
+                testSecteurId = data.data._id;
+                showResult('deleteSecteurResult', { 
+                    message: 'Secteur test créé', 
+                    id: testSecteurId,
+                    data: data.data 
+                });
+            } else {
+                showResult('deleteSecteurResult', data, isError);
+            }
+        }
+        
+        async function deleteSecteurWithUsers() {
+            // Tenter de supprimer un secteur avec utilisateurs (devrait échouer)
+            const { data, isError, status } = await apiCall(`/sites/${IDS.casablanca}/secteurs/${IDS.secteurTraitement}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteSecteurResult', { 
+                message: 'Test DELETE secteur avec utilisateurs',
+                status,
+                response: data 
+            }, isError);
+        }
+        
+        async function deleteSecteurEmpty() {
+            if (!testSecteurId) {
+                showResult('deleteSecteurResult', { error: 'Créez d\'abord un secteur test' }, true);
+                return;
+            }
+            
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}/secteurs/${testSecteurId}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteSecteurResult', data, isError);
+            
+            if (!isError) {
+                testSecteurId = null;
+            }
+        }
+        
+        async function listSecteurs() {
+            const { data, isError } = await apiCall(`/sites/${IDS.casablanca}/secteurs`);
+            showResult('deleteSecteurResult', data, isError);
+        }
+        
+        // PUT Services Tests
+        async function getServiceBefore() {
+            const { data, isError } = await apiCall(`/services/${IDS.serviceProductionU1}`);
+            showResult('putServiceResult', data, isError);
+        }
+        
+        async function putServiceValid() {
+            const { data, isError } = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Production U1',
+                    code: 'CAS_TRAIT_U1_UPD',
+                    isActive: true
+                })
+            });
+            showResult('putServiceResult', data, isError);
+        }
+        
+        async function putServiceInvalid() {
+            const { data, isError } = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'InvalidService',
+                    code: 'INVALID'
+                })
+            });
+            showResult('putServiceResult', data, isError);
+        }
+        
+        // DELETE Services Tests
+        async function createTestService() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}/services`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Contrôle Qualité',
+                    code: 'CAS_TRAIT_CQ_TEST'
+                })
+            });
+            
+            if (!isError && data.data) {
+                testServiceId = data.data._id;
+                showResult('deleteServiceResult', { 
+                    message: 'Service test créé', 
+                    id: testServiceId,
+                    data: data.data 
+                });
+            } else {
+                showResult('deleteServiceResult', data, isError);
+            }
+        }
+        
+        async function deleteServiceWithUsers() {
+            // Tenter de supprimer un service avec utilisateurs (devrait échouer)
+            const { data, isError, status } = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteServiceResult', { 
+                message: 'Test DELETE service avec utilisateurs',
+                status,
+                response: data 
+            }, isError);
+        }
+        
+        async function deleteServiceEmpty() {
+            if (!testServiceId) {
+                showResult('deleteServiceResult', { error: 'Créez d\'abord un service test' }, true);
+                return;
+            }
+            
+            const { data, isError } = await apiCall(`/services/${testServiceId}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteServiceResult', data, isError);
+            
+            if (!isError) {
+                testServiceId = null;
+            }
+        }
+        
+        async function listServices() {
+            const { data, isError } = await apiCall(`/secteurs/${IDS.secteurTraitement}/services`);
+            showResult('deleteServiceResult', data, isError);
+        }
+        
+        // Global functions
+        async function getHierarchy() {
+            const { data, isError } = await apiCall('/sites/hierarchy');
+            showResult('globalResult', data, isError);
+        }
+        
+        async function resetTestData() {
+            // Reset any test data created
+            if (testSecteurId) {
+                await apiCall(`/sites/${IDS.casablanca}/secteurs/${testSecteurId}`, { method: 'DELETE' });
+                testSecteurId = null;
+            }
+            if (testServiceId) {
+                await apiCall(`/services/${testServiceId}`, { method: 'DELETE' });
+                testServiceId = null;
+            }
+            
+            showResult('globalResult', { message: 'Données test réinitialisées' });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Suppression Site - OCP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-login { background-color: #007bff; color: white; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-create { background-color: #28a745; color: white; }
+        .btn-list { background-color: #17a2b8; color: white; }
+        
+        .btn-login:hover { background-color: #0056b3; }
+        .btn-delete:hover { background-color: #c82333; }
+        .btn-create:hover { background-color: #1e7e34; }
+        .btn-list:hover { background-color: #117a8b; }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .current-user {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Test Suppression Site - Admin OCP</h1>
+        
+        <!-- Section de connexion -->
+        <div class="section">
+            <h2>🔐 Connexion Admin</h2>
+            <div class="button-group">
+                <button class="btn-login" onclick="loginAdmin()">🔑 Se connecter comme Admin</button>
+            </div>
+            <div class="current-user" id="currentUser">
+                Aucun utilisateur connecté
+            </div>
+        </div>
+
+        <!-- Section liste des sites -->
+        <div class="section">
+            <h2>📋 Gestion des Sites</h2>
+            <div class="button-group">
+                <button class="btn-list" onclick="listSites()">📋 Lister Sites</button>
+                <button class="btn-create" onclick="createTestSite()">➕ Créer Site Test</button>
+            </div>
+            <div id="sitesResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Section suppression -->
+        <div class="section">
+            <h2>🗑️ Suppression de Sites</h2>
+            <div class="warning">
+                ⚠️ <strong>Attention:</strong> La suppression est définitive (soft delete)
+            </div>
+            <div class="button-group">
+                <button class="btn-delete" onclick="deleteSiteJorfLasfar()">❌ Supprimer Jorf Lasfar</button>
+                <button class="btn-delete" onclick="deleteSiteCasablanca()">❌ Supprimer Casablanca</button>
+                <button class="btn-delete" onclick="deleteTestSite()">❌ Supprimer Site Test</button>
+            </div>
+            <div id="deleteResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Section tests d'autorisation -->
+        <div class="section">
+            <h2>🚫 Tests d'Autorisation</h2>
+            <div class="button-group">
+                <button class="btn-delete" onclick="testDeleteWithoutToken()">❌ Sans Token</button>
+                <button class="btn-delete" onclick="testDeleteWithChefService()">❌ Avec Chef Service</button>
+            </div>
+            <div id="authResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050/api';
+        
+        // IDs réels
+        const IDS = {
+            casablanca: '688550090c4c8dfeb9c74e81',
+            jorfLasfar: '688550090c4c8dfeb9c74e82'
+        };
+        
+        let currentToken = null;
+        let testSiteId = null;
+        
+        // Connexion admin
+        async function loginAdmin() {
+            try {
+                const response = await fetch(`${API_BASE}/auth-jwt/login-dev`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: 'y.bennani@ocp.ma' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentToken = data.data.token;
+                    
+                    document.getElementById('currentUser').textContent = 
+                        `✅ Connecté: ${data.data.user.firstName} ${data.data.user.lastName} (${data.data.user.role})`;
+                    
+                    // Activer les boutons
+                    enableButtons();
+                    
+                    showResult('sitesResult', {
+                        message: 'Admin connecté avec succès',
+                        user: data.data.user
+                    });
+                } else {
+                    showResult('sitesResult', data, true);
+                }
+                
+            } catch (error) {
+                showResult('sitesResult', { error: error.message }, true);
+            }
+        }
+        
+        function enableButtons() {
+            document.querySelectorAll('button:not(.btn-login)').forEach(btn => {
+                btn.classList.remove('disabled');
+            });
+        }
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+
+                if (currentToken) {
+                    headers['Authorization'] = `Bearer ${currentToken}`;
+                }
+
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers,
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { data, isError: !response.ok, status: response.status };
+            } catch (error) {
+                return { data: { error: error.message }, isError: true, status: 0 };
+            }
+        }
+        
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        // Lister les sites
+        async function listSites() {
+            const result = await apiCall('/org/sites');
+            showResult('sitesResult', result, result.isError);
+        }
+        
+        // Créer un site test
+        async function createTestSite() {
+            const testSite = {
+                name: 'Site Test Suppression',
+                code: 'TEST_DEL',
+                address: 'Adresse test pour suppression'
+            };
+
+            const result = await apiCall('/org/sites', {
+                method: 'POST',
+                body: JSON.stringify(testSite)
+            });
+            
+            if (!result.isError && result.data.data) {
+                testSiteId = result.data.data._id;
+            }
+            
+            showResult('sitesResult', result, result.isError);
+        }
+        
+        // Supprimer Jorf Lasfar
+        async function deleteSiteJorfLasfar() {
+            const result = await apiCall(`/org/sites/${IDS.jorfLasfar}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteResult', result, result.isError);
+        }
+        
+        // Supprimer Casablanca
+        async function deleteSiteCasablanca() {
+            const result = await apiCall(`/org/sites/${IDS.casablanca}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteResult', result, result.isError);
+        }
+        
+        // Supprimer site test
+        async function deleteTestSite() {
+            if (!testSiteId) {
+                showResult('deleteResult', { error: 'Créez d\'abord un site test' }, true);
+                return;
+            }
+            
+            const result = await apiCall(`/org/sites/${testSiteId}`, {
+                method: 'DELETE'
+            });
+            showResult('deleteResult', result, result.isError);
+        }
+        
+        // Test sans token
+        async function testDeleteWithoutToken() {
+            const tempToken = currentToken;
+            currentToken = null;
+            
+            const result = await apiCall(`/org/sites/${IDS.jorfLasfar}`, {
+                method: 'DELETE'
+            });
+            
+            currentToken = tempToken;
+            showResult('authResult', result, result.isError);
+        }
+        
+        // Test avec chef service
+        async function testDeleteWithChefService() {
+            try {
+                // Connexion chef service
+                const response = await fetch(`${API_BASE}/auth-jwt/login-dev`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'r.amrani@ocp.ma' })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    const chefServiceToken = data.data.token;
+                    
+                    const result = await fetch(`${API_BASE}/org/sites/${IDS.casablanca}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${chefServiceToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const deleteData = await result.json();
+                    showResult('authResult', { 
+                        status: result.status,
+                        data: deleteData,
+                        userRole: deleteData.userRole
+                    }, !result.ok);
+                }
+            } catch (error) {
+                showResult('authResult', { error: error.message }, true);
+            }
+        }
+        
+        // Désactiver les boutons au démarrage
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('button:not(.btn-login)').forEach(btn => {
+                btn.classList.add('disabled');
+            });
+        });
+    </script>
+</body>
+</html>

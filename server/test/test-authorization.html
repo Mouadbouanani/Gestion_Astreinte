@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Autorisation Hiérarchique - OCP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .user-selector {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .user-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .user-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .user-btn.admin { background: #dc3545; color: white; }
+        .user-btn.chef_site { background: #fd7e14; color: white; }
+        .user-btn.chef_secteur { background: #ffc107; color: black; }
+        .user-btn.ingenieur { background: #20c997; color: white; }
+        .user-btn.chef_service { background: #0dcaf0; color: black; }
+        .user-btn.collaborateur { background: #6f42c1; color: white; }
+        
+        .user-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-create { background-color: #28a745; color: white; }
+        .btn-update { background-color: #ffc107; color: black; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-read { background-color: #17a2b8; color: white; }
+        
+        .btn-create:hover { background-color: #1e7e34; }
+        .btn-update:hover { background-color: #e0a800; }
+        .btn-delete:hover { background-color: #c82333; }
+        .btn-read:hover { background-color: #117a8b; }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .hierarchy {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin-bottom: 20px;
+        }
+        .current-user {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .permission-matrix {
+            display: grid;
+            grid-template-columns: 200px repeat(4, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        .matrix-header {
+            background: #6c757d;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .matrix-role {
+            background: #e9ecef;
+            padding: 8px;
+            font-weight: bold;
+        }
+        .matrix-cell {
+            background: white;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .matrix-cell.allowed { background: #d4edda; }
+        .matrix-cell.denied { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Test Autorisation Hiérarchique OCP</h1>
+        
+        <!-- Sélecteur d'utilisateur -->
+        <div class="user-selector">
+            <h3>👤 Sélectionner un utilisateur pour tester</h3>
+            <div class="user-buttons">
+                <button class="user-btn admin" onclick="selectUser('admin', 'y.bennani@ocp.ma')">🔴 Admin</button>
+                <button class="user-btn chef_site" onclick="selectUser('chef_site', 'h.alami@ocp.ma')">🟠 Chef Site</button>
+                <button class="user-btn chef_secteur" onclick="selectUser('chef_secteur', 'm.tazi@ocp.ma')">🟡 Chef Secteur</button>
+                <button class="user-btn ingenieur" onclick="selectUser('ingenieur', 'a.benali@ocp.ma')">🟢 Ingénieur</button>
+                <button class="user-btn chef_service" onclick="selectUser('chef_service', 'r.amrani@ocp.ma')">🔵 Chef Service</button>
+                <button class="user-btn collaborateur" onclick="selectUser('collaborateur', 'f.idrissi@ocp.ma')">🟣 Collaborateur</button>
+            </div>
+            <div class="current-user" id="currentUser">
+                Aucun utilisateur sélectionné
+            </div>
+        </div>
+
+        <!-- Hiérarchie OCP -->
+        <div class="section">
+            <h2>🏗️ Hiérarchie et Périmètres OCP</h2>
+            <div class="hierarchy">
+🔴 Admin National (tous sites)
+├── 🟠 Chef de Site (son site uniquement)
+    ├── 🟡 Chef de Secteur (son secteur uniquement)
+    │   ├── 🟢 Ingénieur (consultation secteur)
+    │   └── 🔵 Chef de Service (son service uniquement)
+    │       └── 🟣 Collaborateur (consultation planning)
+            </div>
+        </div>
+
+        <!-- Matrice des permissions -->
+        <div class="section">
+            <h2>📊 Matrice des Permissions</h2>
+            <div class="permission-matrix">
+                <div class="matrix-header">Rôle</div>
+                <div class="matrix-header">Créer Site</div>
+                <div class="matrix-header">Créer Secteur</div>
+                <div class="matrix-header">Créer Service</div>
+                <div class="matrix-header">Modifier Tout</div>
+                
+                <div class="matrix-role">🔴 Admin</div>
+                <div class="matrix-cell allowed">✅</div>
+                <div class="matrix-cell allowed">✅</div>
+                <div class="matrix-cell allowed">✅</div>
+                <div class="matrix-cell allowed">✅</div>
+                
+                <div class="matrix-role">🟠 Chef Site</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell allowed">✅ (son site)</div>
+                <div class="matrix-cell allowed">✅ (son site)</div>
+                <div class="matrix-cell allowed">✅ (son site)</div>
+                
+                <div class="matrix-role">🟡 Chef Secteur</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell allowed">✅ (son secteur)</div>
+                <div class="matrix-cell allowed">✅ (son secteur)</div>
+                
+                <div class="matrix-role">🟢 Ingénieur</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">👁️ (lecture seule)</div>
+                
+                <div class="matrix-role">🔵 Chef Service</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell allowed">✅ (son service)</div>
+                
+                <div class="matrix-role">🟣 Collaborateur</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">❌</div>
+                <div class="matrix-cell denied">👁️ (lecture seule)</div>
+            </div>
+        </div>
+
+        <!-- Tests Secteurs -->
+        <div class="section">
+            <h2>🏭 Tests Secteurs</h2>
+            <div class="button-group">
+                <button class="btn-create" onclick="testCreateSecteur()">➕ Créer Secteur</button>
+                <button class="btn-update" onclick="testUpdateSecteur()">✏️ Modifier Secteur</button>
+                <button class="btn-delete" onclick="testDeleteSecteur()">🗑️ Supprimer Secteur</button>
+                <button class="btn-read" onclick="testReadSecteur()">👁️ Consulter Secteur</button>
+            </div>
+            <div id="secteurResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests Services -->
+        <div class="section">
+            <h2>🔧 Tests Services</h2>
+            <div class="button-group">
+                <button class="btn-create" onclick="testCreateService()">➕ Créer Service</button>
+                <button class="btn-update" onclick="testUpdateService()">✏️ Modifier Service</button>
+                <button class="btn-delete" onclick="testDeleteService()">🗑️ Supprimer Service</button>
+                <button class="btn-read" onclick="testReadService()">👁️ Consulter Service</button>
+            </div>
+            <div id="serviceResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Tests Cross-Périmètre -->
+        <div class="section">
+            <h2>🚫 Tests Cross-Périmètre (doivent échouer)</h2>
+            <div class="button-group">
+                <button class="btn-delete" onclick="testCrossSite()">🌐 Accès Autre Site</button>
+                <button class="btn-delete" onclick="testCrossSecteur()">🏭 Accès Autre Secteur</button>
+                <button class="btn-delete" onclick="testCrossService()">🔧 Accès Autre Service</button>
+            </div>
+            <div id="crossResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5050/api/org';
+        
+        // IDs réels
+        const IDS = {
+            casablanca: '688550090c4c8dfeb9c74e81',
+            jorfLasfar: '688550090c4c8dfeb9c74e82',
+            secteurTraitement: '688550090c4c8dfeb9c74e8e',
+            secteurExtraction: '688550090c4c8dfeb9c74e8f',
+            serviceProductionU1: '688550090c4c8dfeb9c74eb7'
+        };
+        
+        let currentUser = null;
+        let currentUserEmail = null;
+        
+        function selectUser(role, email) {
+            currentUser = role;
+            currentUserEmail = email;
+            
+            // Mettre à jour l'affichage
+            document.querySelectorAll('.user-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.user-btn.${role}`).classList.add('active');
+            
+            document.getElementById('currentUser').textContent = 
+                `Utilisateur actuel: ${email} (${role.replace('_', ' ').toUpperCase()})`;
+        }
+        
+        async function apiCall(url, options = {}) {
+            if (!currentUserEmail) {
+                return { data: { message: 'Veuillez sélectionner un utilisateur' }, isError: true, status: 400 };
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-user-email': currentUserEmail,
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { data, isError: !response.ok, status: response.status };
+            } catch (error) {
+                return { data: { error: error.message }, isError: true, status: 0 };
+            }
+        }
+        
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            
+            let resultText = `Status: ${data.status || 'N/A'}\n`;
+            resultText += `Message: ${data.data.message || 'OK'}\n`;
+            
+            if (data.data.userInfo) {
+                resultText += `User: ${data.data.userInfo.name} (${data.data.userInfo.role})\n`;
+            }
+            
+            if (data.data.error) {
+                resultText += `Error: ${data.data.error}\n`;
+            }
+            
+            element.textContent = resultText;
+        }
+        
+        // Tests Secteurs
+        async function testCreateSecteur() {
+            const result = await apiCall(`/sites/${IDS.casablanca}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Maintenance',
+                    code: `TEST_${Date.now()}`
+                })
+            });
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        async function testUpdateSecteur() {
+            const result = await apiCall(`/secteurs/${IDS.secteurTraitement}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Traitement',
+                    code: 'CAS_TRAIT_UPD'
+                })
+            });
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        async function testDeleteSecteur() {
+            const result = await apiCall(`/sites/${IDS.casablanca}/secteurs/${IDS.secteurExtraction}`, {
+                method: 'DELETE'
+            });
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        async function testReadSecteur() {
+            const result = await apiCall(`/secteurs/${IDS.secteurTraitement}`);
+            showResult('secteurResult', result, result.isError);
+        }
+        
+        // Tests Services
+        async function testCreateService() {
+            const result = await apiCall(`/secteurs/${IDS.secteurTraitement}/services`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Contrôle Qualité',
+                    code: `SRV_${Date.now()}`
+                })
+            });
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        async function testUpdateService() {
+            const result = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Production U1',
+                    code: 'CAS_U1_UPD'
+                })
+            });
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        async function testDeleteService() {
+            const result = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'DELETE'
+            });
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        async function testReadService() {
+            const result = await apiCall(`/services/${IDS.serviceProductionU1}`);
+            showResult('serviceResult', result, result.isError);
+        }
+        
+        // Tests Cross-Périmètre
+        async function testCrosssite() {
+            const result = await apiCall(`/sites/${IDS.jorfLasfar}/secteurs`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Maintenance',
+                    code: `CROSS_${Date.now()}`
+                })
+            });
+            showResult('crossResult', result, result.isError);
+        }
+        
+        async function testCrossSecteur() {
+            const result = await apiCall(`/secteurs/${IDS.secteurExtraction}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Extraction',
+                    code: 'CROSS_EXTR'
+                })
+            });
+            showResult('crossResult', result, result.isError);
+        }
+        
+        async function testCrossService() {
+            const result = await apiCall(`/services/${IDS.serviceProductionU1}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: 'Production U1',
+                    code: 'CROSS_U1'
+                })
+            });
+            showResult('crossResult', result, result.isError);
+        }
+    </script>
+</body>
+</html>
