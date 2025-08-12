@@ -242,6 +242,36 @@ export interface UpdateUserForm {
   isActive: boolean;
 }
 
+// Types pour les indisponibilités
+export type IndispoStatut = 'en_attente' | 'approuve' | 'refuse' | 'annule';
+export type IndispoMotif = 'conge_annuel' | 'conge_maladie' | 'conge_maternite' | 'conge_paternite' | 'formation' | 'mission' | 'urgence_familiale' | 'autre';
+export interface Indisponibilite {
+  _id: string;
+  utilisateur: string | User;
+  dateDebut: string;
+  dateFin: string;
+  motif: IndispoMotif;
+  description?: string;
+  priorite: 'normale' | 'urgente' | 'critique';
+  statut: IndispoStatut;
+  approbation?: {
+    approuvePar?: string | User;
+    approuveLe?: string;
+    commentaireApprobation?: string;
+    niveauApprobation?: 'chef_service' | 'chef_secteur' | 'automatique';
+  };
+  impact?: {
+    planningsAffectes?: Array<{
+      planning: string;
+      gardesAffectees: string[];
+      remplacementTrouve: boolean;
+      remplacant?: string | User;
+    }>;
+    recalculNecessaire?: boolean;
+  };
+  createdAt?: string;
+}
+
 // Types pour les notifications
 export interface NotificationConfig {
   type: 'success' | 'error' | 'warning' | 'info';

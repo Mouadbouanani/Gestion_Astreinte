@@ -20,6 +20,7 @@ import authJwtRoutes from './routes/auth-jwt.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import indisponibiliteRoutes from './routes/indisponibilites.js';
+import planningRoutes from './routes/planning.js';
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -39,9 +40,14 @@ app.use(cors({
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  // IMPORTANT: include PATCH for approve/reject/cancel endpoints
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 204
 }));
+
+// Ensure preflight requests are handled for all routes
+app.options('*', cors());
 
 // Middleware de logging simple
 app.use((req, res, next) => {
@@ -847,8 +853,13 @@ app.use('/api/auth-jwt', authJwtRoutes);
 // Use user management routes
 app.use('/api/users', userRoutes);
 
-// Unavailabilities
+// Planning endpoints
+app.use('/api/planning', planningRoutes);
+
+
+// Unavailabilities (support both EN and FR paths for compatibility)
 app.use('/api/unavailability', indisponibiliteRoutes);
+app.use('/api/indisponibilites', indisponibiliteRoutes);
 
 // Middleware 404
 app.use('*', (req, res) => {

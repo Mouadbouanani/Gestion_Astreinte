@@ -11,6 +11,12 @@ import PlanningAstreinte from '@/pages/Planning/PlanningAstreinte';
 import { SitesPage, SecteurPage, ServicePage, SecteurDashboard, UserManagement } from "@/pages/Admin";
 import { MonSecteur as NewMonSecteur, MesIngenieurs } from '@/pages/ChefSecteur';
 import { MonService as NewMonService, MonEquipe } from '@/pages/ChefService';
+import MyIndisponibilites from '@/pages/Settings/Indisponibilites/MyIndisponibilites';
+import ReviewIndisponibilites from '@/pages/Settings/Indisponibilites/ReviewIndisponibilites';
+import PlanningList from '@/pages/Planning/PlanningList';
+import CreatePlanning from '@/pages/Planning/CreatePlanning';
+import PlanningDetail from '@/pages/Planning/PlanningDetail';
+import GeneratePlanning from '@/pages/Planning/GeneratePlanning';
 
 function App() {
   return (
@@ -101,13 +107,30 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Routes planning */}
-              <Route path="planning" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Planning d'Astreinte</h1>
-                  <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                </div>
+              {/* Routes planning management */}
+              <Route path="planning-management" element={
+                <ProtectedRoute requiredRoles={['admin', 'chef_secteur', 'chef_service']}>
+                  <PlanningList />
+                </ProtectedRoute>
               } />
+              <Route path="planning-management/create" element={
+                <ProtectedRoute requiredRoles={['admin', 'chef_secteur', 'chef_service']}>
+                  <CreatePlanning />
+                </ProtectedRoute>
+              } />
+              <Route path="planning-management/generate" element={
+                <ProtectedRoute requiredRoles={['admin', 'chef_secteur', 'chef_service']}>
+                  <GeneratePlanning />
+                </ProtectedRoute>
+              } />
+              <Route path="planning-management/:id" element={
+                <ProtectedRoute requiredRoles={['admin', 'chef_secteur', 'chef_service']}>
+                  <PlanningDetail />
+                </ProtectedRoute>
+              } />
+
+              {/* Routes planning calendar */}
+              <Route path="planning" element={<PlanningAstreinte />} />
 
               <Route path="mes-gardes" element={
                 <ProtectedRoute requiredRoles={['ingenieur', 'collaborateur']}>
@@ -125,6 +148,18 @@ function App() {
                     <h1 className="text-2xl font-bold">Rapports</h1>
                     <p className="text-gray-600 mt-2">Page en cours de développement...</p>
                   </div>
+                </ProtectedRoute>
+              } />
+
+              {/* Indisponibilités */}
+              <Route path="indisponibilites/my" element={
+                <ProtectedRoute requiredRoles={['ingenieur','collaborateur','chef_service','chef_secteur','admin']}>
+                  <MyIndisponibilites />
+                </ProtectedRoute>
+              } />
+              <Route path="indisponibilites/review" element={
+                <ProtectedRoute requiredRoles={['chef_service','chef_secteur','admin']}>
+                  <ReviewIndisponibilites />
                 </ProtectedRoute>
               } />
 

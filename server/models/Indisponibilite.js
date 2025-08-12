@@ -267,47 +267,52 @@ indisponibiliteSchema.methods.analyserImpactPlannings = async function() {
 indisponibiliteSchema.methods.trouverRemplacants = async function() {
   const User = mongoose.model('User');
   const Service = mongoose.model('Service');
-  
-  // Obtenir l'utilisateur et son service
+  const Secteur = mongoose.model('Secteur');
+
+  // Obtenir l'utilisateur
   const utilisateur = await User.findById(this.utilisateur).populate('service secteur');
   if (!utilisateur) return [];
-  
+
   let candidats = [];
-  
-  if (utilisateur.service) {
-    // Chercher dans le même service d'abord
+
+  if (utilisateur.role === 'ingenieur' && utilisateur.secteur) {
+    // Pour un ingénieur: chercher d'autres ingénieurs du même secteur
+    candidats = await User.find({
+      role: 'ingenieur',
+      secteur: utilisateur.secteur,
+      isActive: true,
+      _id: { $ne: utilisateur._id }
+    });
+  } else if (utilisateur.service) {
+    // Pour un collaborateur/chef_service: chercher dans le même service (collaborateurs + chef de service)
     const service = await Service.findById(utilisateur.service).populate('collaborateurs chefService');
     candidats = [...service.collaborateurs];
-    
-    // Ajouter le chef de service si ce n'est pas lui qui est indisponible
-    if (service.chefService._id.toString() !== this.utilisateur.toString()) {
-      candidats.push(service.chefService);
+    if (service.chefService && service.chefService.toString() !== utilisateur._id.toString()) {
+      // charger chefService si pas peuplé
+      const chef = await User.findById(service.chefService);
+      if (chef) candidats.push(chef);
     }
   }
-  
+
   // Filtrer les candidats disponibles
   const candidatsDisponibles = [];
-  
   for (const candidat of candidats) {
-    if (!candidat.isActive) continue;
-    
-    // Vérifier qu'il n'a pas d'indisponibilité conflictuelle
+    if (!candidat?.isActive) continue;
+
+    // Vérifier indisponibilités conflictuelles
     const conflits = await this.constructor.find({
       utilisateur: candidat._id,
       statut: 'approuve',
-      $or: [
-        {
-          dateDebut: { $lte: this.dateFin },
-          dateFin: { $gte: this.dateDebut }
-        }
-      ]
+      $or: [{
+        dateDebut: { $lte: this.dateFin },
+        dateFin: { $gte: this.dateDebut }
+      }]
     });
-    
     if (conflits.length === 0) {
       candidatsDisponibles.push(candidat);
     }
   }
-  
+
   return candidatsDisponibles;
 };
 

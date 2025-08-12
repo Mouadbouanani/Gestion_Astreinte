@@ -7,19 +7,24 @@ import {
   getIndisponibilites,
   approuverIndisponibilite,
   refuserIndisponibilite,
-  annulerIndisponibilite
+  annulerIndisponibilite,
+  getRemplacants
 } from '../controllers/indisponibiliteController.js';
+import { validateIndisponibiliteCreation } from '../middleware/validation.js';
 
 const router = express.Router();
 
 // Submit an unavailability (self)
-router.post('/', authenticateToken, createIndisponibilite);
+router.post('/', authenticateToken, validateIndisponibiliteCreation, createIndisponibilite);
 
 // List my unavailabilities
 router.get('/my', authenticateToken, getMesIndisponibilites);
 
 // List (managers)
 router.get('/', authenticateToken, getIndisponibilites);
+
+// Suggestions de remplaçants
+router.get('/:id/remplacants', authenticateToken, getRemplacants);
 
 // Approve/Reject
 router.patch('/:id/approve', authenticateToken, approuverIndisponibilite);

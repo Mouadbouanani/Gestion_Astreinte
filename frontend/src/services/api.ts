@@ -16,7 +16,6 @@ import type {
   CreateUserForm,
   UpdateUserForm
 } from '@/types';
-import {id} from "zod/v4/locales";
 
 // Configuration de base d'Axios
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
@@ -38,12 +37,12 @@ class ApiService {
       async (config) => {
         // Check if token needs refresh before making request
         await this.checkAndRefreshTokenIfNeeded();
-        
+
         const token = this.getToken();
         console.log('🔍 Request interceptor - Token:', token ? `${token.substring(0, 20)}...` : 'No token');
         console.log('🔍 Request URL:', config.url);
         console.log('🔍 Request method:', config.method);
-        
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
           console.log('🔍 Authorization header set:', `Bearer ${token.substring(0, 20)}...`);
@@ -60,7 +59,7 @@ class ApiService {
       (response: AxiosResponse) => response,
       async (error) => {
         const originalRequest = error.config;
-        
+
         console.log('🚨 Response interceptor - Error status:', error.response?.status);
         console.log('🚨 Response interceptor - Error data:', error.response?.data);
         console.log('🚨 Response interceptor - Error config:', {
@@ -68,20 +67,20 @@ class ApiService {
           method: originalRequest?.method,
           headers: originalRequest?.headers
         });
-        
+
         // Handle 401 errors (unauthorized)
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-          
+
           // Check if it's a token-related error
           const errorData = error.response?.data;
           if (errorData?.code === 'INVALID_TOKEN' || errorData?.code === 'TOKEN_EXPIRED') {
             console.log('🔄 Token expired, attempting refresh...');
-            
+
             try {
               // Try to refresh the token
               await this.refreshToken();
-              
+
               // Retry the original request with new token
               const newToken = this.getToken();
               if (newToken) {
@@ -103,12 +102,12 @@ class ApiService {
             window.location.href = '/login';
           }
         }
-        
+
         // Handle 403 errors (forbidden) - might be token-related too
         if (error.response?.status === 403) {
           const errorData = error.response?.data;
           console.log('🚫 403 Forbidden error:', errorData);
-          
+
           if (errorData?.code === 'INVALID_TOKEN') {
             console.log('🔄 403 with INVALID_TOKEN, attempting refresh...');
             try {
@@ -128,7 +127,7 @@ class ApiService {
             }
           }
         }
-        
+
         return Promise.reject(error);
       }
     );
@@ -197,12 +196,12 @@ class ApiService {
 
   async refreshToken(): Promise<AuthResponse> {
     const response = await this.api.post<AuthResponse>('/auth-jwt/refresh');
-    
+
     if (response.data.success) {
       this.setToken(response.data.data.token);
       localStorage.setItem('ocp_user', JSON.stringify(response.data.data.user));
     }
-    
+
     return response.data;
   }
 
@@ -217,7 +216,7 @@ class ApiService {
       const expirationTime = payload.exp * 1000; // Convert to milliseconds
       const currentTime = Date.now();
       const timeUntilExpiry = expirationTime - currentTime;
-      
+
       console.log('🔍 Token inspection:', {
         exp: new Date(expirationTime).toISOString(),
         currentTime: new Date(currentTime).toISOString(),
@@ -230,7 +229,7 @@ class ApiService {
           exp: new Date(payload.exp * 1000).toISOString()
         }
       });
-      
+
       // If token expires in less than 5 minutes, refresh it
       if (timeUntilExpiry < 5 * 60 * 1000) {
         console.log('🔄 Token expires soon, refreshing proactively...');
@@ -460,7 +459,7 @@ class ApiService {
     const params = new URLSearchParams();
     if (filters?.siteId) params.append('siteId', filters.siteId);
     if (filters?.secteurId) params.append('secteurId', filters.secteurId);
-    
+
     const response = await this.api.get<ApiResponse<Service[]>>(`/org/services?${params.toString()}`);
     return {
       success: response.data.success,
@@ -486,7 +485,7 @@ class ApiService {
         }
       });
     }
-    
+
     const response = await this.api.get<ApiResponse<User[]>>(`/users?${params.toString()}`);
     return response.data;
   }
@@ -544,7 +543,123 @@ class ApiService {
     const userStr = localStorage.getItem('ocp_user');
     return userStr ? JSON.parse(userStr) : null;
   }
+
+  // Indisponibilités
+  async createIndisponibilite(data: { dateDebut: string; dateFin: string; motif: string; description?: string; priorite?: 'normale' | 'urgente' | 'critique'; }): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>('/unavailability', data);
+    return response.data;
+  }
+
+  async getMesIndisponibilites(params?: { statut?: string }): Promise<ApiResponse> {
+    const query = new URLSearchParams();
+    if (params?.statut) query.append('statut', params.statut);
+    const qs = query.toString();
+    const response = await this.api.get<ApiResponse>(`/unavailability/my${qs ? `?${qs}` : ''}`);
+    return response.data;
+  }
+
+  async getIndisponibilites(filters?: { statut?: string; site?: string; secteur?: string; service?: string; role?: string; from?: string; to?: string; }): Promise<ApiResponse> {
+    const query = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([k, v]) => { if (v) query.append(k, String(v)); });
+    const qs = query.toString();
+    const response = await this.api.get<ApiResponse>(`/unavailability${qs ? `?${qs}` : ''}`);
+    return response.data;
+  }
+
+  async approveIndisponibilite(id: string, commentaire?: string): Promise<ApiResponse> {
+    const response = await this.api.patch<ApiResponse>(`/unavailability/${id}/approve`, { commentaire });
+    return response.data;
+  }
+
+  async rejectIndisponibilite(id: string, motif?: string): Promise<ApiResponse> {
+    const response = await this.api.patch<ApiResponse>(`/unavailability/${id}/reject`, { motif });
+    return response.data;
+  }
+
+  async cancelIndisponibilite(id: string, motif?: string): Promise<ApiResponse> {
+    const response = await this.api.patch<ApiResponse>(`/unavailability/${id}/cancel`, { motif });
+    return response.data;
+  }
+
+  async getIndispoRemplacants(id: string): Promise<ApiResponse> {
+    const response = await this.api.get<ApiResponse>(`/unavailability/${id}/remplacants`);
+    return response.data;
+  }
+
+  // Planning
+  async getPlanningAssignments(params: { siteId?: string; secteurId?: string; serviceId?: string; from: string; to: string; }): Promise<ApiResponse> {
+    const query = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => { if (v) query.append(k, String(v)); });
+    const response = await this.api.get<ApiResponse>(`/planning/assignments?${query.toString()}`);
+    return response.data;
+  }
+
+  // Planning Management
+  async createPlanning(data: { type: 'service' | 'secteur'; site: string; secteur: string; service?: string; periode: { debut: string; fin: string }; metadata?: any }): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>('/planning', data);
+    return response.data;
+  }
+
+  async listPlannings(filters?: { siteId?: string; secteurId?: string; serviceId?: string; statut?: string; type?: string }): Promise<ApiResponse> {
+    const query = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([k, v]) => { if (v) query.append(k, String(v)); });
+    const qs = query.toString();
+    const response = await this.api.get<ApiResponse>(`/planning${qs ? `?${qs}` : ''}`);
+    return response.data;
+  }
+
+  async getPlanning(id: string): Promise<ApiResponse> {
+    const response = await this.api.get<ApiResponse>(`/planning/${id}`);
+    return response.data;
+  }
+
+  async addGarde(planningId: string, data: { date: string; utilisateur: string; heureDebut?: string; heureFin?: string; commentaire?: string }): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>(`/planning/${planningId}/gardes`, data);
+    return response.data;
+  }
+
+  async deleteGarde(planningId: string, gardeId: string): Promise<ApiResponse> {
+    const response = await this.api.delete<ApiResponse>(`/planning/${planningId}/gardes/${gardeId}`);
+    return response.data;
+  }
+
+  async replaceGarde(planningId: string, gardeId: string, data: { remplacant: string; motif?: string }): Promise<ApiResponse> {
+    const response = await this.api.patch<ApiResponse>(`/planning/${planningId}/gardes/${gardeId}/replace`, data);
+    return response.data;
+  }
+
+  async submitPlanning(id: string): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>(`/planning/${id}/submit`);
+    return response.data;
+  }
+
+  async approvePlanning(id: string, commentaire?: string): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>(`/planning/${id}/approve`, { commentaire });
+    return response.data;
+  }
+
+  async rejectPlanning(id: string, motif?: string): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>(`/planning/${id}/reject`, { motif });
+    return response.data;
+  }
+
+  async publishPlanning(id: string): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>(`/planning/${id}/publish`);
+    return response.data;
+  }
+
+  async getPlanningConflicts(id: string): Promise<ApiResponse> {
+    const response = await this.api.get<ApiResponse>(`/planning/${id}/conflits`);
+    return response.data;
+  }
+
+  async generatePlanning(data: { type: 'service' | 'secteur'; site: string; secteur: string; service?: string; from: string; to: string; includeWeekdays?: boolean }): Promise<ApiResponse> {
+    const response = await this.api.post<ApiResponse>('/planning/generate', data);
+    return response.data;
+  }
 }
+
+
 
 // Instance singleton
 export const apiService = new ApiService();

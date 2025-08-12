@@ -14,12 +14,20 @@ const canApprove = (approver, applicant) => {
     return { ok: false, reason: 'Seul le chef de secteur du même secteur peut approuver une indisponibilité d\'ingénieur' };
   }
 
-  // Applicant is collaborateur or chef_service -> chef_service must approve in same service
-  if (['collaborateur', 'chef_service'].includes(applicant.role)) {
+  // Applicant is collaborateur -> chef_service must approve in same service
+  if (applicant.role === 'collaborateur') {
     if (approver.role === 'chef_service' && approver.service?.toString() === applicant.service?.toString()) {
       return { ok: true, niveau: 'chef_service' };
     }
-    return { ok: false, reason: 'Seul le chef de service du même service peut approuver une indisponibilité de collaborateur/chef de service' };
+    return { ok: false, reason: 'Seul le chef de service du même service peut approuver une indisponibilité de collaborateur' };
+  }
+
+  // Applicant is chef_service -> chef_secteur must approve
+  if (applicant.role === 'chef_service') {
+    if (approver.role === 'chef_secteur' && approver.secteur?.toString() === applicant.secteur?.toString()) {
+      return { ok: true, niveau: 'chef_secteur' };
+    }
+    return { ok: false, reason: 'Seul le chef de secteur du même secteur peut approuver une indisponibilité de chef de service' };
   }
 
   // Applicant is chef_secteur -> admin must approve
@@ -54,8 +62,17 @@ export const createIndisponibilite = async (req, res) => {
       statut: 'en_attente'
     });
 
-    // Save without triggering complex middleware
+    // Save
     await nouvelle.save();
+
+    // Optionally pre-compute planning impact
+    try {
+      await nouvelle.analyserImpactPlannings();
+      nouvelle.impact.recalculNecessaire = true;
+      await nouvelle.save();
+    } catch (e) {
+      console.warn('Analyse d\'impact planifications échouée (non bloquant):', e.message);
+    }
 
     // Return clean object
     const result = {
@@ -67,6 +84,7 @@ export const createIndisponibilite = async (req, res) => {
       description: nouvelle.description,
       priorite: nouvelle.priorite,
       statut: nouvelle.statut,
+      impact: nouvelle.impact,
       createdAt: nouvelle.createdAt
     };
 
@@ -170,7 +188,7 @@ export const approuverIndisponibilite = async (req, res) => {
     const can = canApprove(approbateur, ind.utilisateur);
     if (!can.ok) return res.status(403).json({ success: false, message: can.reason });
 
-    // Simple approval without complex middleware
+    // Approval
     ind.statut = 'approuve';
     ind.approbation = {
       approuvePar: approbateur._id,
@@ -178,12 +196,17 @@ export const approuverIndisponibilite = async (req, res) => {
       commentaireApprobation: commentaire,
       niveauApprobation: can.niveau === 'automatique' ? (approbateur.role === 'admin' ? 'automatique' : approbateur.role) : can.niveau
     };
+
+    // Analyse impact + marquer recalcul
+    await ind.analyserImpactPlannings();
+    ind.impact.recalculNecessaire = true;
     await ind.save();
 
     const result = {
       _id: ind._id,
       statut: ind.statut,
-      approbation: ind.approbation
+      approbation: ind.approbation,
+      impact: ind.impact
     };
 
     res.json({ success: true, message: 'Indisponibilité approuvée', data: result });
@@ -261,3 +284,17 @@ async function userIdsBy({ role, site, secteur, service }) {
   return users.map(u => u._id);
 }
 
+
+
+export const getRemplacants = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ind = await Indisponibilite.findById(id);
+    if (!ind) return res.status(404).json({ success: false, message: 'Indisponibilité introuvable' });
+    const candidats = await ind.trouverRemplacants();
+    res.json({ success: true, data: candidats });
+  } catch (error) {
+    console.error('Erreur récupération remplaçants indisponibilité:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération des remplaçants', error: error.message });
+  }
+};

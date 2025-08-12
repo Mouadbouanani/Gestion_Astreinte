@@ -252,7 +252,7 @@ export const validatePlanningCreation = (req, res, next) => {
 // Validation pour la création d'indisponibilité
 export const validateIndisponibiliteCreation = (req, res, next) => {
   const schema = Joi.object({
-    utilisateur: objectIdSchema.required(),
+    // utilisateur est déduit du token (req.user.id)
     dateDebut: Joi.date().iso().required(),
     dateFin: Joi.date().iso().min(Joi.ref('dateDebut')).required(),
     motif: Joi.string().valid(
@@ -268,7 +268,7 @@ export const validateIndisponibiliteCreation = (req, res, next) => {
   });
 
   const { error, value } = schema.validate(req.body);
-  
+
   if (error) {
     return res.status(400).json({
       success: false,

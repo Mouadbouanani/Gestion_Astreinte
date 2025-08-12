@@ -140,16 +140,28 @@ const Sidebar: React.FC = () => {
         roles: ['admin', 'chef_secteur', 'chef_service', 'ingenieur', 'collaborateur'],
       },
       {
+        name: 'Gestion Planning',
+        href: '/planning-management',
+        icon: CalendarDaysIcon,
+        roles: ['admin', 'chef_secteur', 'chef_service'],
+      },
+      {
         name: 'Mes Gardes',
         href: '/mes-gardes',
         icon: CalendarDaysIcon,
         roles: ['ingenieur', 'collaborateur'],
       },
       {
-        name: 'Demande Indisponibilité',
-        href: '/indisponibilite',
+        name: 'Mes indisponibilités',
+        href: '/indisponibilites/my',
         icon: CalendarDaysIcon,
-        roles: ['ingenieur', 'collaborateur'],
+        roles: ['ingenieur', 'collaborateur', 'chef_service', 'chef_secteur', 'admin'],
+      },
+      {
+        name: 'Valider indisponibilités',
+        href: '/indisponibilites/review',
+        icon: CalendarDaysIcon,
+        roles: ['chef_service', 'chef_secteur', 'admin'],
       },
     ];
 

@@ -13,7 +13,7 @@ export default {
           secondary: '#157a1aff',  // Bleu foncé
           accent: '#f59e0b',     // Orange/Jaune OCP
           success: '#4eb910ff',    // Vert
-          warning: '#f59e0b',    // Orange
+          warning: '#239BA7',    // Orange
           error: '#ef4444',      // Rouge
           gray: {
             50: '#f8fafc',
