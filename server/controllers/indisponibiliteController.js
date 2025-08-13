@@ -40,7 +40,7 @@ const canApprove = (approver, applicant) => {
 
 export const createIndisponibilite = async (req, res) => {
   try {
-    const utilisateur = req.user?.id;
+    const utilisateur = req.user?._id;
     if (!utilisateur) {
       return res.status(401).json({ success: false, message: 'Authentification requise' });
     }
@@ -97,7 +97,7 @@ export const createIndisponibilite = async (req, res) => {
 
 export const getMesIndisponibilites = async (req, res) => {
   try {
-    const utilisateur = req.user?.id;
+    const utilisateur = req.user?._id;
     if (!utilisateur) {
       return res.status(401).json({ success: false, message: 'Authentification requise' });
     }
@@ -144,7 +144,7 @@ export const getIndisponibilites = async (req, res) => {
       filter['utilisateur'] = await userIdsBy({ service: current.service });
     } else {
       // ingénieur/collaborateur: own only
-      filter['utilisateur'] = current.id;
+      filter['utilisateur'] = current._id;
     }
 
     // Additional optional filters
@@ -261,15 +261,122 @@ export const annulerIndisponibilite = async (req, res) => {
     if (!ind) return res.status(404).json({ success: false, message: 'Indisponibilité introuvable' });
 
     // Owner or admin can cancel
-    if (utilisateur.role !== 'admin' && ind.utilisateur.toString() !== utilisateur.id.toString()) {
+    if (utilisateur.role !== 'admin' && ind.utilisateur.toString() !== utilisateur._id.toString()) {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
 
-    await ind.annuler(utilisateur.id, motif);
+    await ind.annuler(utilisateur._id, motif);
     res.json({ success: true, message: 'Indisponibilité annulée', data: ind });
   } catch (error) {
     console.error('Erreur annulation indisponibilité:', error);
     res.status(500).json({ success: false, message: 'Erreur lors de l\'annulation', error: error.message });
+  }
+};
+
+// Get single indisponibilité
+export const getIndisponibilite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const utilisateur = req.user;
+
+    const ind = await Indisponibilite.findById(id)
+      .populate('utilisateur', 'firstName lastName role site secteur service')
+      .populate('approbation.approuvePar', 'firstName lastName role');
+
+    if (!ind) {
+      return res.status(404).json({ success: false, message: 'Indisponibilité introuvable' });
+    }
+
+    // Check access rights
+    const canView = utilisateur.role === 'admin' ||
+                   ind.utilisateur._id.toString() === utilisateur._id.toString() ||
+                   (utilisateur.role === 'chef_secteur' && ind.utilisateur.secteur?.toString() === utilisateur.secteur?.toString()) ||
+                   (utilisateur.role === 'chef_service' && ind.utilisateur.service?.toString() === utilisateur.service?.toString());
+
+    if (!canView) {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    res.json({ success: true, data: ind });
+  } catch (error) {
+    console.error('Erreur récupération indisponibilité:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération', error: error.message });
+  }
+};
+
+// Update indisponibilité (only owner and only if status is 'en_attente')
+export const updateIndisponibilite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const utilisateur = req.user;
+    const { dateDebut, dateFin, motif, description, priorite } = req.body;
+
+    const ind = await Indisponibilite.findById(id);
+    if (!ind) {
+      return res.status(404).json({ success: false, message: 'Indisponibilité introuvable' });
+    }
+
+    // Only owner can update
+    if (ind.utilisateur.toString() !== utilisateur._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Seul le propriétaire peut modifier cette indisponibilité' });
+    }
+
+    // Only if status is 'en_attente'
+    if (ind.statut !== 'en_attente') {
+      return res.status(400).json({ success: false, message: 'Impossible de modifier une indisponibilité déjà traitée' });
+    }
+
+    // Update fields
+    if (dateDebut) ind.dateDebut = new Date(dateDebut);
+    if (dateFin) ind.dateFin = new Date(dateFin);
+    if (motif) ind.motif = motif;
+    if (description !== undefined) ind.description = description;
+    if (priorite) ind.priorite = priorite;
+
+    await ind.save();
+
+    // Re-analyze impact
+    try {
+      await ind.analyserImpactPlannings();
+      ind.impact.recalculNecessaire = true;
+      await ind.save();
+    } catch (e) {
+      console.warn('Analyse d\'impact planifications échouée (non bloquant):', e.message);
+    }
+
+    res.json({ success: true, message: 'Indisponibilité mise à jour', data: ind });
+  } catch (error) {
+    console.error('Erreur mise à jour indisponibilité:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour', error: error.message });
+  }
+};
+
+// Delete indisponibilité (only owner and only if status is 'en_attente')
+export const deleteIndisponibilite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const utilisateur = req.user;
+
+    const ind = await Indisponibilite.findById(id);
+    if (!ind) {
+      return res.status(404).json({ success: false, message: 'Indisponibilité introuvable' });
+    }
+
+    // Only owner or admin can delete
+    if (utilisateur.role !== 'admin' && ind.utilisateur.toString() !== utilisateur._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Seul le propriétaire ou un administrateur peut supprimer cette indisponibilité' });
+    }
+
+    // Only if status is 'en_attente' or 'refuse'
+    if (!['en_attente', 'refuse'].includes(ind.statut)) {
+      return res.status(400).json({ success: false, message: 'Impossible de supprimer une indisponibilité approuvée ou annulée' });
+    }
+
+    await Indisponibilite.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Indisponibilité supprimée' });
+  } catch (error) {
+    console.error('Erreur suppression indisponibilité:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression', error: error.message });
   }
 };
 

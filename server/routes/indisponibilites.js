@@ -5,6 +5,9 @@ import {
   createIndisponibilite,
   getMesIndisponibilites,
   getIndisponibilites,
+  getIndisponibilite,
+  updateIndisponibilite,
+  deleteIndisponibilite,
   approuverIndisponibilite,
   refuserIndisponibilite,
   annulerIndisponibilite,
@@ -22,6 +25,15 @@ router.get('/my', authenticateToken, getMesIndisponibilites);
 
 // List (managers)
 router.get('/', authenticateToken, getIndisponibilites);
+
+// Get single indisponibilité
+router.get('/:id', authenticateToken, getIndisponibilite);
+
+// Update indisponibilité (owner only, en_attente status only)
+router.put('/:id', authenticateToken, validateIndisponibiliteCreation, updateIndisponibilite);
+
+// Delete indisponibilité (owner or admin, en_attente/refuse status only)
+router.delete('/:id', authenticateToken, deleteIndisponibilite);
 
 // Suggestions de remplaçants
 router.get('/:id/remplacants', authenticateToken, getRemplacants);
