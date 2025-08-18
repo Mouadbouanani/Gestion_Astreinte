@@ -1,0 +1,482 @@
+\chapter{Tests, Validation et Déploiement}
+
+\section{Stratégie de tests}
+\subsection{Approche de test}
+La stratégie de test du système OCP Astreinte suit une approche pyramidale, privilégiant les tests unitaires et d'intégration pour assurer la qualité et la fiabilité du code :
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{images/pyramide-tests.png}
+\caption{Pyramide de tests du projet OCP Astreinte}
+\label{fig:pyramide-tests}
+\end{figure}
+
+\subsubsection{Tests unitaires (70\%)}
+\begin{itemize}
+    \item Tests des composants React individuels
+    \item Tests des fonctions utilitaires
+    \item Tests des contrôleurs backend
+    \item Tests des modèles de données
+\end{itemize}
+
+\subsubsection{Tests d'intégration (20\%)}
+\begin{itemize}
+    \item Tests des endpoints API
+    \item Tests des flux d'authentification
+    \item Tests des interactions base de données
+    \item Tests des services externes
+\end{itemize}
+
+\subsubsection{Tests end-to-end (10\%)}
+\begin{itemize}
+    \item Tests des scénarios utilisateur complets
+    \item Tests de navigation et d'interface
+    \item Tests de performance et de charge
+    \item Tests de sécurité
+\end{itemize}
+
+\section{Tests unitaires}
+\subsection{Tests frontend}
+\subsubsection{Tests des composants React}
+Les composants React sont testés avec Jest et React Testing Library :
+
+\begin{lstlisting}[language=JavaScript, caption=Test d'un composant React]
+import { render, screen, fireEvent } from '@testing-library/react';
+import { SecteurPage } from './SecteurPage';
+
+describe('SecteurPage', () => {
+  test('affiche la liste des secteurs', async () => {
+    render(<SecteurPage />);
+    
+    expect(screen.getByText('Gestion des Secteurs')).toBeInTheDocument();
+    expect(screen.getByText('Chargement...')).toBeInTheDocument();
+    
+    // Attendre le chargement des données
+    await screen.findByText('Traitement');
+    expect(screen.getByText('Extraction')).toBeInTheDocument();
+  });
+
+  test('permet de créer un nouveau secteur', async () => {
+    render(<SecteurPage />);
+    
+    const createButton = screen.getByText('Nouveau Secteur');
+    fireEvent.click(createButton);
+    
+    expect(screen.getByText('Créer un Secteur')).toBeInTheDocument();
+  });
+});
+\end{lstlisting}
+
+\subsubsection{Tests des services API}
+Les services API sont testés pour vérifier la gestion des erreurs et des réponses :
+
+\begin{lstlisting}[language=JavaScript, caption=Test d'un service API]
+import { apiService } from './apiService';
+import { mockApiResponse } from '../__mocks__/apiMock';
+
+describe('apiService', () => {
+  test('récupère les secteurs avec succès', async () => {
+    mockApiResponse('/api/org/secteurs', { data: mockSecteurs });
+    
+    const result = await apiService.getAllSecteurs();
+    
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(3);
+  });
+
+  test('gère les erreurs d\'API', async () => {
+    mockApiResponse('/api/org/secteurs', null, 500);
+    
+    await expect(apiService.getAllSecteurs()).rejects.toThrow();
+  });
+});
+\end{lstlisting}
+
+\subsection{Tests backend}
+\subsubsection{Tests des contrôleurs}
+Les contrôleurs sont testés pour vérifier la logique métier :
+
+\begin{lstlisting}[language=JavaScript, caption=Test d'un contrôleur backend]
+import request from 'supertest';
+import { app } from '../server';
+import { User } from '../models/User';
+
+describe('User Controller', () => {
+  test('GET /api/users retourne la liste des utilisateurs', async () => {
+    const response = await request(app)
+      .get('/api/users')
+      .set('Authorization', `Bearer ${validToken}`);
+    
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(Array.isArray(response.body.data)).toBe(true);
+  });
+
+  test('filtre les utilisateurs par secteur', async () => {
+    const response = await request(app)
+      .get('/api/users?secteur=64f1a2b3c4d5e6f7g8h9i0j1')
+      .set('Authorization', `Bearer ${validToken}`);
+    
+    expect(response.status).toBe(200);
+    expect(response.body.data.every(u => u.secteur === '64f1a2b3c4d5e6f7g8h9i0j1')).toBe(true);
+  });
+});
+\end{lstlisting}
+
+\subsubsection{Tests des modèles}
+Les modèles Mongoose sont testés pour la validation des données :
+
+\begin{lstlisting}[language=JavaScript, caption=Test d'un modèle Mongoose]
+import mongoose from 'mongoose';
+import { User } from '../models/User';
+
+describe('User Model', () => {
+  test('crée un utilisateur valide', () => {
+    const validUser = new User({
+      email: 'test@ocp.ma',
+      password: 'password123',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: 'ingenieur',
+      secteur: new mongoose.Types.ObjectId()
+    });
+    
+    expect(validUser.validateSync()).toBeUndefined();
+  });
+
+  test('rejette un utilisateur sans email', () => {
+    const invalidUser = new User({
+      password: 'password123',
+      firstName: 'John',
+      lastName: 'Doe'
+    });
+    
+    const validationError = invalidUser.validateSync();
+    expect(validationError.errors.email).toBeDefined();
+  });
+});
+\end{lstlisting}
+
+\section{Tests d'intégration}
+\subsection{Tests des endpoints API}
+\subsubsection{Tests d'authentification}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/tests-authentification.png}
+\caption{Tests des flux d'authentification}
+\label{fig:tests-authentification}
+\end{figure}
+
+Les tests d'authentification vérifient :
+\begin{itemize}
+    \item Connexion avec identifiants valides
+    \item Rejet des identifiants invalides
+    \item Expiration des tokens
+    \item Refresh automatique des tokens
+    \item Déconnexion sécurisée
+\end{itemize}
+
+\subsubsection{Tests des opérations CRUD}
+Chaque entité (sites, secteurs, services, utilisateurs) est testée pour :
+\begin{itemize}
+    \item Création avec données valides
+    \item Validation des données invalides
+    \item Mise à jour des entités existantes
+    \item Suppression logique et physique
+    \item Gestion des contraintes et dépendances
+\end{itemize}
+
+\subsection{Tests de base de données}
+\subsubsection{Tests de connexion}
+\begin{lstlisting}[language=JavaScript, caption=Test de connexion à la base de données]
+import mongoose from 'mongoose';
+import { config } from '../config/database';
+
+describe('Database Connection', () => {
+  test('se connecte à MongoDB avec succès', async () => {
+    await mongoose.connect(config.mongoURI);
+    expect(mongoose.connection.readyState).toBe(1);
+    await mongoose.connection.close();
+  });
+
+  test('gère les erreurs de connexion', async () => {
+    const invalidURI = 'mongodb://invalid:27017/test';
+    
+    await expect(mongoose.connect(invalidURI)).rejects.toThrow();
+  });
+});
+\end{lstlisting}
+
+\subsubsection{Tests de transactions}
+Les tests de transactions vérifient l'intégrité des données lors d'opérations complexes :
+
+\begin{lstlisting}[language=JavaScript, caption=Test de transaction]
+describe('Secteur Operations', () => {
+  test('supprime un secteur et ses services associés', async () => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+      // Supprimer le secteur
+      await Secteur.findByIdAndDelete(secteurId).session(session);
+      
+      // Vérifier que les services sont supprimés
+      const services = await Service.find({ secteur: secteurId }).session(session);
+      expect(services).toHaveLength(0);
+      
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  });
+});
+\end{lstlisting}
+
+\section{Tests de sécurité}
+\subsection{Tests d'autorisation}
+\subsubsection{Tests des permissions par rôle}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/tests-permissions.png}
+\caption{Matrice de tests des permissions}
+\label{fig:tests-permissions}
+\end{figure}
+
+Chaque rôle est testé pour vérifier :
+\begin{itemize}
+    \item Accès autorisé aux ressources appropriées
+    \item Refus d'accès aux ressources non autorisées
+    \item Filtrage automatique des données selon le contexte
+    \item Respect des contraintes organisationnelles
+\end{itemize}
+
+\subsubsection{Tests d'injection et XSS}
+\begin{lstlisting}[language=JavaScript, caption=Test de sécurité]
+describe('Security Tests', () => {
+  test('rejette les tentatives d\'injection SQL', async () => {
+    const maliciousInput = "'; DROP TABLE users; --";
+    
+    const response = await request(app)
+      .post('/api/org/secteurs')
+      .send({ name: maliciousInput })
+      .set('Authorization', `Bearer ${adminToken}`);
+    
+    expect(response.status).toBe(400);
+  });
+
+  test('sanitise les entrées XSS', async () => {
+    const xssInput = '<script>alert("xss")</script>';
+    
+    const response = await request(app)
+      .post('/api/org/secteurs')
+      .send({ name: xssInput })
+      .set('Authorization', `Bearer ${adminToken}`);
+    
+    expect(response.body.data.name).not.toContain('<script>');
+  });
+});
+\end{lstlisting}
+
+\section{Tests de performance}
+\subsection{Tests de charge}
+\subsubsection{Tests avec différents nombres d'utilisateurs}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/tests-performance.png}
+\caption{Tests de performance et de charge}
+\label{fig:tests-performance}
+\end{figure}
+
+Les tests de performance vérifient :
+\begin{itemize}
+    \item Temps de réponse < 2 secondes pour 100 utilisateurs
+    \item Gestion efficace de la mémoire
+    \item Optimisation des requêtes de base de données
+    \item Mise en cache des données fréquemment consultées
+\end{itemize}
+
+\subsubsection{Tests de base de données}
+\begin{lstlisting}[language=JavaScript, caption=Test de performance de base de données]
+describe('Database Performance', () => {
+  test('récupère 1000 utilisateurs en moins de 1 seconde', async () => {
+    const startTime = Date.now();
+    
+    const users = await User.find({}).limit(1000);
+    
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    expect(duration).toBeLessThan(1000);
+    expect(users).toHaveLength(1000);
+  });
+
+  test('utilise les index pour les requêtes fréquentes', async () => {
+    const explain = await User.find({ secteur: secteurId }).explain('executionStats');
+    
+    expect(explain.executionStats.totalDocsExamined).toBeLessThan(100);
+  });
+});
+\end{lstlisting}
+
+\section{Tests end-to-end}
+\subsection{Scénarios utilisateur complets}
+\subsubsection{Scénario : Création d'un secteur}
+\begin{enumerate}
+    \item Connexion en tant qu'administrateur
+    \item Navigation vers la gestion des secteurs
+    \item Création d'un nouveau secteur
+    \item Vérification de l'apparition dans la liste
+    \item Création d'un service dans ce secteur
+    \item Attribution d'utilisateurs au service
+\end{enumerate}
+
+\subsubsection{Scénario : Gestion des astreintes}
+\begin{enumerate}
+    \item Connexion en tant que chef de service
+    \item Consultation de l'équipe
+    \item Création d'un planning d'astreinte
+    \item Gestion des disponibilités
+    \item Validation du planning
+    \item Notification des équipes
+\end{enumerate}
+
+\subsection{Tests d'interface utilisateur}
+\subsubsection{Tests de navigation}
+\begin{itemize}
+    \item Navigation entre les différentes pages
+    \item Utilisation des menus et boutons
+    \item Gestion des formulaires et validation
+    \item Affichage des messages d'erreur
+\end{itemize}
+
+\subsubsection{Tests de responsivité}
+\begin{itemize}
+    \item Adaptation aux différentes tailles d'écran
+    \item Utilisation sur mobile et tablette
+    \item Gestion des orientations portrait/paysage
+    \item Accessibilité et navigation au clavier
+\end{itemize}
+
+\section{Validation et acceptation}
+\subsection{Validation fonctionnelle}
+\subsubsection{Validation par les utilisateurs finaux}
+La validation fonctionnelle a été effectuée par :
+\begin{itemize}
+    \item \textbf{Administrateurs IT} : Validation des fonctionnalités d'administration
+    \item \textbf{Chefs de site} : Validation de la gestion des secteurs
+    \item \textbf{Chefs de secteur} : Validation de la gestion des services
+    \item \textbf{Chefs de service} : Validation de la gestion des équipes
+    \item \textbf{Utilisateurs finaux} : Validation de l'ergonomie générale
+\end{itemize}
+
+\subsubsection{Critères d'acceptation}
+Les critères d'acceptation validés incluent :
+\begin{itemize}
+    \item Toutes les fonctionnalités métier sont opérationnelles
+    \item L'interface utilisateur est intuitive et responsive
+    \item Les performances respectent les exigences définies
+    \item La sécurité est conforme aux standards d'entreprise
+    \item La documentation utilisateur est complète et claire
+\end{itemize}
+
+\subsection{Validation technique}
+\subsubsection{Revue de code}
+La revue de code a été effectuée selon les critères :
+\begin{itemize}
+    \item Respect des standards de codage
+    \item Qualité et lisibilité du code
+    \item Gestion des erreurs et exceptions
+    \item Tests et couverture de code
+    \item Documentation et commentaires
+\end{itemize}
+
+\subsubsection{Tests de non-régression}
+Les tests de non-régression ont vérifié :
+\begin{itemize}
+    \item Absence de régression sur les fonctionnalités existantes
+    \item Compatibilité avec les données existantes
+    \item Performance maintenue ou améliorée
+    \item Sécurité renforcée
+\end{itemize}
+
+\section{Déploiement et mise en production}
+\subsection{Environnements de déploiement}
+\subsubsection{Environnement de développement}
+\begin{itemize}
+    \item \textbf{Local} : Développement sur machine locale
+    \item \textbf{Base de données} : MongoDB local
+    \item \textbf{Configuration} : Variables d'environnement de développement
+    \item \textbf{Logs} : Niveau DEBUG pour le développement
+\end{itemize}
+
+\subsubsection{Environnement de production}
+\begin{itemize}
+    \item \textbf{Serveur} : Infrastructure OCP
+    \item \textbf{Base de données} : MongoDB Atlas (cloud)
+    \item \textbf{Configuration} : Variables d'environnement de production
+    \item \textbf{Logs} : Niveau INFO pour la production
+\end{itemize}
+
+\subsection{Procédures de déploiement}
+\subsubsection{Déploiement automatisé}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/pipeline-deploiement.png}
+\caption{Pipeline de déploiement automatisé}
+\label{fig:pipeline-deploiement}
+\end{figure}
+
+Le déploiement suit le processus :
+\begin{enumerate}
+    \item \textbf{Build} : Compilation et tests automatisés
+    \item \textbf{Validation} : Tests de qualité et sécurité
+    \textbf{Déploiement} : Mise en production automatique
+    \item \textbf{Vérification} : Tests de santé post-déploiement
+    \item \textbf{Monitoring} : Surveillance continue des performances
+\end{enumerate}
+
+\subsubsection{Scripts de déploiement}
+\begin{lstlisting}[language=bash, caption=Script de déploiement]
+#!/bin/bash
+echo "Déploiement OCP Astreinte..."
+
+# Build du frontend
+echo "Build du frontend..."
+cd frontend
+npm run build
+cd ..
+
+# Build du backend
+echo "Build du backend..."
+cd server
+npm run build
+cd ..
+
+# Déploiement
+echo "Déploiement..."
+pm2 restart ocp-astreinte
+
+echo "Déploiement terminé avec succès!"
+\end{lstlisting}
+
+\subsection{Monitoring et maintenance}
+\subsubsection{Monitoring en production}
+\begin{itemize}
+    \item \textbf{Performance} : Temps de réponse et utilisation des ressources
+    \item \textbf{Disponibilité} : Uptime et temps de réponse des services
+    \item \textbf{Erreurs} : Logs d'erreur et alertes automatiques
+    \item \textbf{Sécurité} : Tentatives d'intrusion et accès non autorisés
+\end{itemize}
+
+\subsubsection{Maintenance préventive}
+\begin{itemize}
+    \item \textbf{Sauvegardes} : Sauvegarde quotidienne de la base de données
+    \item \textbf{Mises à jour} : Mises à jour de sécurité et de performance
+    \item \textbf{Optimisation} : Optimisation continue des requêtes et de l'indexation
+    \item \textbf{Documentation} : Mise à jour de la documentation technique
+\end{itemize}
+
+Cette phase de tests, validation et déploiement a permis de s'assurer de la qualité, de la sécurité et de la fiabilité du système OCP Astreinte avant sa mise en production.

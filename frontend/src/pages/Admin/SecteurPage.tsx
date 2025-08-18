@@ -15,7 +15,7 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 import apiService from '@/services/api';
-import type { Secteur, Site } from '@/types';
+import type { Secteur, Site, User } from '@/types';
 
 interface SecteurPageProps {
   siteId?: string;
@@ -44,6 +44,8 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedSecteur, setSelectedSecteur] = useState<Secteur | null>(null);
+  const [selectedSecteurUsers, setSelectedSecteurUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -136,11 +138,10 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
         const response = await apiService.getAllSecteurs(selectedSite?._id);
         setSecteurs(response.data || []);
       } else if (canManageOwnSecteur && user?.secteur) {
-        // Chef secteur can only see their own secteur
-        const response = await apiService.getSecteurById(user.secteur._id);
-        if (response.data) {
-          setSecteurs([response.data]);
-        }
+        // Chef secteur: fetch all secteurs and keep only their own
+        const allResponse = await apiService.getAllSecteurs();
+        const own = (allResponse.data || []).find((s: Secteur) => s._id === user.secteur._id);
+        setSecteurs(own ? [own] : []);
       }
     } catch (error) {
       console.error('Error loading secteurs:', error);
@@ -243,6 +244,21 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
   const handleView = (secteur: Secteur) => {
     setSelectedSecteur(secteur);
     setShowDetailsModal(true);
+    // Load real employees from DB for this secteur
+    void loadUsersForSecteur(secteur._id);
+  };
+
+  const loadUsersForSecteur = async (secteurId: string) => {
+    try {
+      setIsLoadingUsers(true);
+      const response = await apiService.getUsers({ secteur: secteurId, limit: 1000 });
+      setSelectedSecteurUsers(response.data || []);
+    } catch (error) {
+      console.error('Error loading users for secteur:', error);
+      setSelectedSecteurUsers([]);
+    } finally {
+      setIsLoadingUsers(false);
+    }
   };
 
   // Check permissions - only admin and chef_secteur can view this page
@@ -939,6 +955,41 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
                   </div>
                 </div>
               )}
+
+              {/* Employees list (real data from DB) */}
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                  <UserGroupIcon className="h-5 w-5 mr-2 text-gray-500" />
+                  Employés du secteur
+                </h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {isLoadingUsers ? (
+                    <div className="text-sm text-gray-600">Chargement des employés…</div>
+                  ) : selectedSecteurUsers.length === 0 ? (
+                    <div className="text-sm text-gray-500">Aucun employé trouvé pour ce secteur.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedSecteurUsers.map((u) => (
+                        <div key={u._id} className="flex items-center justify-between bg-white rounded-md border p-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 rounded-full bg-ocp-primary text-white flex items-center justify-center text-sm font-medium">
+                              {u.firstName?.[0]}
+                              {u.lastName?.[0]}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{u.firstName} {u.lastName}</div>
+                              <div className="text-xs text-gray-500">{u.email}</div>
+                            </div>
+                          </div>
+                          <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 capitalize">
+                            {u.role.replace('_', ' ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end mt-6">

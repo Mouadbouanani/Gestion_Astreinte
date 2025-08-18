@@ -8,6 +8,7 @@ import Login from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
 
 import PlanningAstreinte from '@/pages/Planning/PlanningAstreinte';
+import PlanningManagement from '@/pages/Planning/PlanningManagement';
 import { SitesPage, SecteurPage, ServicePage, SecteurDashboard, UserManagement } from "@/pages/Admin";
 import { MonSecteur as NewMonSecteur, MesIngenieurs } from '@/pages/ChefSecteur';
 import { MonService as NewMonService, MonEquipe } from '@/pages/ChefService';
@@ -38,6 +39,13 @@ function App() {
             }>
               {/* Planning d'astreinte - accessible à tous les utilisateurs connectés */}
               <Route path="planning" element={<PlanningAstreinte />} />
+
+              {/* Gestion du planning - réservé aux rôles de management */}
+              <Route path="planning-management" element={
+                <ProtectedRoute requiredRoles={["admin", "chef_secteur", "chef_service"]}>
+                  <PlanningManagement />
+                </ProtectedRoute>
+              } />
 
 
 
@@ -101,13 +109,7 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Routes planning */}
-              <Route path="planning" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Planning d'Astreinte</h1>
-                  <p className="text-gray-600 mt-2">Page en cours de développement...</p>
-                </div>
-              } />
+
 
               <Route path="mes-gardes" element={
                 <ProtectedRoute requiredRoles={['ingenieur', 'collaborateur']}>

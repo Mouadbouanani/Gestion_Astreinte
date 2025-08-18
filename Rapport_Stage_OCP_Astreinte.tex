@@ -1,0 +1,109 @@
+%% Rapport de Stage - Système de Gestion des Astreintes OCP
+%% Basé sur le template de Centrale Méditerranée
+%% Auteur: [Votre Nom] - [Année]
+%% Sujet: Développement d'un système de gestion des astreintes pour OCP
+
+
+\documentclass[11pt]{memoir}
+
+% Informations de la page de garde
+\newcommand{\anneeUniversitaire}{2024/2025}
+\newcommand{\prenomNOM}{[Votre Nom et Prénom]}
+\newcommand{\dateDebutStage}{[Date de début]}
+\newcommand{\dateFinStage}{[Date de fin]}
+\newcommand{\nomEntreprise}{Office Chérifien des Phosphates (OCP)}
+\newcommand{\sujetMission}{Développement d'un système de gestion des astreintes et de planification des équipes}
+\newcommand{\directeurStage}{[Nom du responsable OCP]}
+\newcommand{\tuteurEcole}{[Nom de l'enseignant tuteur]}
+\newcommand{\libelleAdresseEntreprise}{OCP Group - [Adresse complète]}
+
+\setlength{\headheight}{14.80524pt}
+\input{MainLayout/Packages}
+\input{MainLayout/PageLayout}
+\input{MainLayout/ChapterStyle}
+
+\makeatother
+\chapterstyle{HansenColor}
+
+\begin{document}
+
+\setcounter{secnumdepth}{3}
+\thispagestyle{empty}
+\include{MainLayout/TitlePage}
+
+\newgeometry{top=3cm, bottom=1cm, left=2cm, right=6cm}
+
+% --- Remerciements ---
+\chapter*{Remerciements}
+Je tiens à exprimer ma profonde gratitude à toutes les personnes qui ont contribué à la réussite de ce stage et à la réalisation de ce projet.
+
+Mes remerciements s'adressent en premier lieu à [Nom du directeur de stage], mon directeur de stage au sein d'OCP, pour m'avoir fait confiance et m'avoir guidé tout au long de ce projet. Son expertise et ses conseils ont été précieux pour la conception et l'implémentation du système.
+
+Je remercie également l'équipe IT d'OCP pour leur accueil chaleureux et leur soutien technique, ainsi que tous les utilisateurs finaux qui ont participé aux tests et à la validation du système.
+
+Un grand merci à [Nom du tuteur], mon tuteur académique, pour son accompagnement et ses conseils méthodologiques.
+
+Enfin, je remercie ma famille et mes amis pour leur soutien constant et leur compréhension pendant cette période de stage.
+
+\bigskip
+\begin{center}
+    \Huge * * *
+\end{center}
+\bigskip
+\textit{La diffusion de ce rapport de stage a été approuvée par mon tuteur [Prénom NOM] avant sa divulgation.}
+\newpage
+
+% --- Abstract ---
+\chapter*{Résumé}
+Ce rapport présente les travaux réalisés dans le cadre de mon stage de fin d'études au sein de l'Office Chérifien des Phosphates (OCP), portant sur le développement d'un système de gestion des astreintes et de planification des équipes. L'objectif principal était de concevoir et implémenter une application web moderne permettant la gestion automatisée des plannings d'astreinte, l'organisation hiérarchique des secteurs et services, et la gestion des utilisateurs selon leurs rôles et permissions.
+
+Pour ce faire, j'ai mis en œuvre des technologies web modernes (React, Node.js, MongoDB) en m'appuyant sur des architectures robustes et des bonnes pratiques de développement. L'application intègre un système d'authentification sécurisé, une gestion des permissions basée sur les rôles, et une interface utilisateur intuitive adaptée aux besoins opérationnels d'OCP.
+
+Les résultats obtenus ont permis de digitaliser et automatiser un processus jusqu'alors manuel, améliorant significativement l'efficacité opérationnelle, la traçabilité des astreintes et la satisfaction des utilisateurs. Ce stage m'a également permis de consolider mes compétences en développement full-stack et de découvrir les enjeux spécifiques liés au secteur industriel et à la gestion des ressources humaines.
+
+\bigskip\newline\newline
+\textbf{\color{CentraleBlue}Mots clés} Gestion des astreintes, Planification des équipes, Application web, React, Node.js, MongoDB, Gestion des permissions, Interface utilisateur
+
+% --- Abstract Anglais ---
+\bigskip\bigskip
+This report describes the work carried out during my final year internship at the Office Chérifien des Phosphates (OCP), focused on developing a duty management and team planning system. The main objective was to design and implement a modern web application enabling automated duty planning management, hierarchical organization of sectors and services, and user management according to their roles and permissions.
+
+To achieve this, I implemented modern web technologies (React, Node.js, MongoDB) using robust architectures and development best practices. The application integrates a secure authentication system, role-based permission management, and an intuitive user interface adapted to OCP's operational needs.
+
+The results enabled the digitization and automation of a previously manual process, significantly improving operational efficiency, duty traceability, and user satisfaction. This internship also allowed me to strengthen my full-stack development skills and gain insight into the specific challenges of the industrial sector and human resource management.
+
+\bigskip\newline\newline
+\textbf{\color{CentraleBlue}Keywords} Duty management, Team planning, Web application, React, Node.js, MongoDB, Permission management, User interface
+
+\newpage
+
+\restoregeometry 
+
+\tableofcontents
+
+\listoffigures
+\listoftables
+
+%%% Chapitres %%%
+\include{Chapters/Chapter1}
+\include{Chapters/Chapter2}
+\include{Chapters/Chapter3}
+\include{Chapters/Chapter4}
+\include{Chapters/Chapter5}
+
+%%% Glossaire %%%
+\printglossaries
+
+%%% Annexes %%%
+\appendix
+
+\include{Chapters/Appendix/Appendix1}
+\include{Chapters/Appendix/Appendix2}
+
+\urlstyle{same}
+
+%%% Bibliographie %%%
+\bibliographystyle{plain} 
+\bibliography{References}
+
+\end{document}

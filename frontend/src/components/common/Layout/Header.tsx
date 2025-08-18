@@ -5,9 +5,15 @@ import {
   UserCircleIcon,
   PowerIcon,
   Cog6ToothIcon,
+  Bars3Icon,
 } from '@heroicons/react/24/outline';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  sidebarOpen?: boolean;
+  onSidebarToggle?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ sidebarOpen, onSidebarToggle }) => {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -15,8 +21,16 @@ const Header: React.FC = () => {
   if (!user) {
     return (
       <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
-        {/* Titre de la page */}
-        <div className="flex items-center">
+        {/* Mobile sidebar toggle + Titre */}
+        <div className="flex items-center space-x-4">
+          {onSidebarToggle && (
+            <button
+              onClick={onSidebarToggle}
+              className="lg:hidden flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            >
+              <Bars3Icon className="h-6 w-6" />
+            </button>
+          )}
           <h1 className="text-xl font-semibold text-gray-900">
             Gestion d'Astreinte OCP
           </h1>
@@ -42,11 +56,32 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
-      {/* Titre de la page */}
-      <div className="flex items-center">
-        <h1 className="text-xl font-semibold text-gray-900">
+      {/* Mobile sidebar toggle + Titre */}
+      <div className="flex items-center space-x-4">
+        {onSidebarToggle && (
+          <button
+            onClick={onSidebarToggle}
+            className="lg:hidden flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          >
+            <Bars3Icon className="h-6 w-6" />
+          </button>
+        )}
+        
+        {/* Titre - masqué sur desktop quand sidebar ouverte, toujours visible sur mobile */}
+        <h1 className={`text-xl font-semibold text-gray-900 ${
+          sidebarOpen !== undefined 
+            ? 'lg:hidden xl:block' 
+            : ''
+        }`}>
           Gestion d'Astreinte OCP
         </h1>
+        
+        {/* Titre alternatif pour desktop quand sidebar fermée */}
+        {sidebarOpen === false && (
+          <h1 className="hidden lg:block xl:hidden text-xl font-semibold text-gray-900">
+            OCP Astreinte
+          </h1>
+        )}
       </div>
 
       {/* Actions utilisateur */}

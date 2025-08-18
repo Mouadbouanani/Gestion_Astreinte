@@ -8,8 +8,8 @@ import {
   updateUser,
   deleteUser
 } from '../controllers/userController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { smartAuthorization } from '../middleware/jwt-auth.js';
+import { authenticateToken } from '../middleware/jwt-auth.js';
+import { requireAdmin } from '../middleware/roleAuth.js';
 
 const router = express.Router();
 
@@ -29,7 +29,7 @@ const createUserValidation = [
     .withMessage('Email invalide'),
   body('phone')
     .matches(/^(\+212|0)[5-7][0-9]{8}$/)
-    .withMessage('Numéro de téléphone marocain invalide'),
+    .withMessage('Numéro de téléphone marocain invalide (format: +212XXXXXXXXX ou 0XXXXXXXXX)'),
   body('password')
     .isLength({ min: 8 })
     .withMessage('Le mot de passe doit contenir au moins 8 caractères')
@@ -125,25 +125,25 @@ const updateUserValidation = [
 /**
  * @route   GET /api/users
  * @desc    Get all users with filtering and pagination
- * @access  Public (like secteurs)
+ * @access  Private (token required to enable role-based scoping)
  */
-router.get('/', getUsers);
+router.get('/', authenticateToken, getUsers);
 
 /**
  * @route   GET /api/users/:id
  * @desc    Get single user by ID
- * @access  Public (like secteurs)
+ * @access  Private (token required)
  */
-router.get('/:id', getUserById);
+router.get('/:id', authenticateToken, getUserById);
 
 /**
  * @route   POST /api/users
  * @desc    Create new user
- * @access  Private (Admin only - using flexibleAuth like frontend)
+ * @access  Private (Admin only)
  */
 router.post('/',
   authenticateToken,
-  smartAuthorization(['admin']),
+  requireAdmin,
   createUserValidation,
   createUser
 );
@@ -151,11 +151,11 @@ router.post('/',
 /**
  * @route   PUT /api/users/:id
  * @desc    Update user
- * @access  Private (Admin only - using flexibleAuth like frontend)
+ * @access  Private (Admin only)
  */
 router.put('/:id',
   authenticateToken,
-  smartAuthorization(['admin']),
+  requireAdmin,
   updateUserValidation,
   updateUser
 );
@@ -163,11 +163,11 @@ router.put('/:id',
 /**
  * @route   DELETE /api/users/:id
  * @desc    Delete user (soft delete)
- * @access  Private (Admin only - using flexibleAuth like frontend)
+ * @access  Private (Admin only)
  */
 router.delete('/:id',
   authenticateToken,
-  smartAuthorization(['admin']),
+  requireAdmin,
   deleteUser
 );
 

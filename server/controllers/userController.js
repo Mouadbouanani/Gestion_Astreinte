@@ -24,6 +24,60 @@ export const getUsers = async (req, res) => {
       isActive
     } = req.query;
 
+    // Role-based filtering (if authenticated) - CHECK FIRST
+    const currentUser = req.user;
+    
+    // Debug logging
+    console.log('🔍 DEBUG: Current user in controller:', {
+      id: currentUser?.id,
+      email: currentUser?.email,
+      role: currentUser?.role,
+      service: currentUser?.service,
+      serviceId: currentUser?.service?._id || currentUser?.service
+    });
+    console.log('🔍 DEBUG: Query parameters:', { role, service, secteur, site });
+    
+    if (currentUser) {
+      if (currentUser.role === 'chef_secteur' && currentUser.secteur) {
+        // Restrict visible roles to engineers and collaborators by default
+        const allowedRoles = ['ingenieur', 'collaborateur'];
+        if (role && !allowedRoles.includes(role)) {
+          console.log('🔍 DEBUG: Chef secteur blocked role:', role);
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              totalPages: 0,
+              total: 0,
+              limit: parseInt(limit),
+              hasNext: false,
+              hasPrev: false
+            }
+          });
+        }
+      } else if (currentUser.role === 'chef_service' && currentUser.service) {
+        // Chef service should only see collaborators by default
+        const allowedRole = 'collaborateur';
+        if (role && role !== allowedRole) {
+          console.log('🔍 DEBUG: Chef service blocked role:', role);
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              totalPages: 0,
+              total: 0,
+              limit: parseInt(limit),
+              hasNext: false,
+              hasPrev: false
+            }
+          });
+        }
+      }
+      // Admin retains full visibility
+    }
+
     // Build filter object
     const filter = {};
     
@@ -41,15 +95,35 @@ export const getUsers = async (req, res) => {
     if (service) filter.service = service;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-    // Role-based filtering (if authenticated)
-    const currentUser = req.user;
+    // Apply role-based scoping to filter
     if (currentUser) {
       if (currentUser.role === 'chef_secteur' && currentUser.secteur) {
+        // Always scope to the chef_secteur's secteur, regardless of query parameters
         filter.secteur = currentUser.secteur;
+        console.log('🔍 DEBUG: Applied secteur filter:', filter.secteur);
+
+        // Restrict visible roles to engineers and collaborators by default
+        const allowedRoles = ['ingenieur', 'collaborateur'];
+        if (!role) {
+          filter.role = { $in: allowedRoles };
+          console.log('🔍 DEBUG: Applied role filter (secteur):', filter.role);
+        }
       } else if (currentUser.role === 'chef_service' && currentUser.service) {
+        // Always scope to the chef_service's service, regardless of query parameters
         filter.service = currentUser.service;
+        console.log('🔍 DEBUG: Applied service filter:', filter.service);
+
+        // Chef service should only see collaborators by default
+        const allowedRole = 'collaborateur';
+        if (!role) {
+          filter.role = allowedRole;
+          console.log('🔍 DEBUG: Applied role filter (service):', filter.role);
+        }
       }
+      // Admin retains full visibility with any filters applied above
     }
+    
+    console.log('🔍 DEBUG: Final filter object:', JSON.stringify(filter, null, 2));
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -135,9 +209,13 @@ export const getUserById = async (req, res) => {
  */
 export const createUser = async (req, res) => {
   try {
+    console.log('🔍 CREATE USER - Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔍 CREATE USER - Current user:', req.user?.email, req.user?.role);
+
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ CREATE USER - Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Données invalides',
@@ -158,9 +236,12 @@ export const createUser = async (req, res) => {
       address
     } = req.body;
 
+    console.log('🔍 CREATE USER - Extracted data:', { firstName, lastName, email, role, site, secteur, service });
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('❌ CREATE USER - User already exists:', email);
       return res.status(400).json({
         success: false,
         message: 'Un utilisateur avec cet email existe déjà'
@@ -176,16 +257,20 @@ export const createUser = async (req, res) => {
     let secteurId = secteur;
     let serviceId = service;
 
+    console.log('🔍 CREATE USER - Resolving references:', { site, secteur, service });
+
     // Handle site - can be ObjectId or name
     if (site && !mongoose.Types.ObjectId.isValid(site)) {
       const siteDoc = await Site.findOne({ name: site });
       if (!siteDoc) {
+        console.log('❌ CREATE USER - Site not found:', site);
         return res.status(400).json({
           success: false,
           message: `Site "${site}" introuvable`
         });
       }
       siteId = siteDoc._id;
+      console.log('✅ CREATE USER - Site resolved:', site, '->', siteId);
     }
 
     // Handle secteur - can be ObjectId or name with validation
@@ -194,6 +279,7 @@ export const createUser = async (req, res) => {
       const secteurQuery = siteId ? { name: secteur, site: siteId } : { name: secteur };
       const secteurDoc = await Secteur.findOne(secteurQuery);
       if (!secteurDoc) {
+        console.log('❌ CREATE USER - Secteur not found:', secteur, 'for site:', siteId);
         return res.status(400).json({
           success: false,
           message: `Secteur "${secteur}" introuvable${siteId ? ` pour le site sélectionné` : ''}`
@@ -202,6 +288,7 @@ export const createUser = async (req, res) => {
 
       // Validate secteur belongs to the site
       if (siteId && !secteurDoc.site.equals(siteId)) {
+        console.log('❌ CREATE USER - Secteur does not belong to site:', secteur, siteId);
         return res.status(400).json({
           success: false,
           message: `Le secteur "${secteur}" n'appartient pas au site sélectionné`
@@ -209,6 +296,7 @@ export const createUser = async (req, res) => {
       }
 
       secteurId = secteurDoc._id;
+      console.log('✅ CREATE USER - Secteur resolved:', secteur, '->', secteurId);
     }
 
     // Handle service - can be ObjectId or name with validation
@@ -217,6 +305,7 @@ export const createUser = async (req, res) => {
       const serviceQuery = secteurId ? { name: service, secteur: secteurId } : { name: service };
       const serviceDoc = await Service.findOne(serviceQuery);
       if (!serviceDoc) {
+        console.log('❌ CREATE USER - Service not found:', service, 'for secteur:', secteurId);
         return res.status(400).json({
           success: false,
           message: `Service "${service}" introuvable${secteurId ? ` dans le secteur sélectionné` : ''}`
@@ -225,6 +314,7 @@ export const createUser = async (req, res) => {
 
       // Validate service belongs to the secteur
       if (secteurId && !serviceDoc.secteur.equals(secteurId)) {
+        console.log('❌ CREATE USER - Service does not belong to secteur:', service, secteurId);
         return res.status(400).json({
           success: false,
           message: `Le service "${service}" n'appartient pas au secteur sélectionné`
@@ -232,6 +322,7 @@ export const createUser = async (req, res) => {
       }
 
       serviceId = serviceDoc._id;
+      console.log('✅ CREATE USER - Service resolved:', service, '->', serviceId);
     }
 
     // Create user object
@@ -259,8 +350,11 @@ export const createUser = async (req, res) => {
       userData.address = address;
     }
 
+    console.log('🔍 CREATE USER - Final user data:', { ...userData, password: '[HIDDEN]' });
+
     // Role-based validation
     if (role === 'chef_service' && !userData.service) {
+      console.log('❌ CREATE USER - Chef service must have service assigned');
       return res.status(400).json({
         success: false,
         message: 'Un chef de service doit être assigné à un service'
@@ -268,6 +362,7 @@ export const createUser = async (req, res) => {
     }
 
     if (role === 'collaborateur' && !userData.service) {
+      console.log('❌ CREATE USER - Collaborateur must have service assigned');
       return res.status(400).json({
         success: false,
         message: 'Un collaborateur doit être assigné à un service'
@@ -275,6 +370,7 @@ export const createUser = async (req, res) => {
     }
 
     if (role === 'chef_secteur' && !userData.secteur) {
+      console.log('❌ CREATE USER - Chef secteur must have secteur assigned');
       return res.status(400).json({
         success: false,
         message: 'Un chef de secteur doit être assigné à un secteur'
@@ -284,6 +380,7 @@ export const createUser = async (req, res) => {
     // Create user
     const user = new User(userData);
     await user.save();
+    console.log('✅ CREATE USER - User saved successfully:', user._id);
 
     // Populate references for response
     await user.populate('site', 'name code');
@@ -294,6 +391,7 @@ export const createUser = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
+    console.log('✅ CREATE USER - User created successfully:', userResponse.email);
     res.status(201).json({
       success: true,
       message: 'Utilisateur créé avec succès',
@@ -301,7 +399,8 @@ export const createUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('❌ CREATE USER - Error creating user:', error);
+    console.error('❌ CREATE USER - Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la création de l\'utilisateur',
@@ -576,8 +675,7 @@ export const deleteUser = async (req, res) => {
     }
 
     // Soft delete - deactivate user
-    user.isActive = false;
-    await user.save();
+    await User.findByIdAndUpdate(id, { isActive: false }, { new: true, runValidators: false });
 
     res.status(200).json({
       success: true,

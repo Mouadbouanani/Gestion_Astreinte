@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import PlanningCalendar from '@/components/planning/PlanningCalendar';
 import PlanningFilters from '@/components/planning/PlanningFilters';
+import WeekendHolidayCalendar from '@/components/planning/WeekendHolidayCalendar';
+import PlanningManager from '@/components/planning/PlanningManager';
 import apiService from '@/services/api';
+import astreinteService from '@/services/astreinte.service';
+import type { Panne, NouvellePanne } from '@/services/astreinte.service';
 import {
-  BuildingOfficeIcon,
-  UserGroupIcon,
   CalendarDaysIcon,
+  ExclamationTriangleIcon,
   ChartBarIcon,
-  MapIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 
@@ -20,16 +22,7 @@ interface DashboardStats {
   totalSecteurs: number;
   totalServices: number;
   totalUsers: number;
-  activeUsers: number;
-  usersByRole: Record<string, number>;
-  recentActivity?: Array<{
-    id: string;
-    type: string;
-    user: string;
-    target: string;
-    description: string;
-    timestamp: string;
-  }>;
+  recentPannes?: Panne[];
 }
 
 interface DashboardPlanningFilters {
@@ -46,27 +39,18 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [planningFilters, setPlanningFilters] = useState<DashboardPlanningFilters>({
     startDate: new Date(),
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   });
-
-  // Helper functions to safely access user properties
-  const getSiteName = (site: any): string => {
-    if (typeof site === 'string') return site;
-    if (typeof site === 'object' && site?.name) return site.name;
-    return 'N/A';
-  };
-
-  const getSecteurName = (secteur: any): string => {
-    if (typeof secteur === 'string') return secteur;
-    if (typeof secteur === 'object' && secteur?.name) return secteur.name;
-    return 'N/A';
-  };
-
-  const getServiceName = (service: any): string => {
-    if (typeof service === 'string') return service;
-    if (typeof service === 'object' && service?.name) return service.name;
-    return 'N/A';
-  };
+  const [showPanneModal, setShowPanneModal] = useState(false);
+  const [newPanne, setNewPanne] = useState<NouvellePanne>({
+    titre: '',
+    description: '',
+    type: 'technique',
+    urgence: 'moyenne',
+    priorite: 'normale'
+  });
+  const [viewMode, setViewMode] = useState<'view' | 'manage'>('view');
+  const [isSubmittingPanne, setIsSubmittingPanne] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -75,52 +59,36 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      console.log('📊 Loading dashboard data...');
-      console.log('📊 API Base URL:', import.meta.env.VITE_API_URL || 'http://localhost:5050/api');
-
-      // Fetch real data from API
+      
+      // Load dashboard stats
       const response = await apiService.getDashboardStats();
-      console.log('📊 Dashboard API response:', response);
       
       if (response.success && response.data) {
-        console.log('📊 Setting real dashboard stats:', response.data);
         setStats(response.data);
       } else {
-        console.error('❌ Erreur récupération données dashboard:', response.message);
-        // Fallback to mock data if API fails
         const mockStats: DashboardStats = {
           totalSites: 8,
           totalSecteurs: 40,
           totalServices: 112,
           totalUsers: 18,
-          activeUsers: 18,
-          usersByRole: {
-            admin: 1,
-            chef_secteur: 4,
-            chef_service: 4,
-            ingenieur: 4,
-            collaborateur: 5,
-          },
+          recentPannes: []
         };
-        console.log('📊 Using fallback mock stats');
         setStats(mockStats);
+      }
+
+      // Load recent pannes
+      const pannes = await astreinteService.getPannesRecentes();
+      if (pannes.length > 0) {
+        setStats(prev => prev ? { ...prev, recentPannes: pannes } : null);
       }
     } catch (error) {
       console.error('❌ Erreur chargement dashboard:', error);
-      // Fallback to mock data on error
       const mockStats: DashboardStats = {
         totalSites: 8,
         totalSecteurs: 40,
         totalServices: 112,
         totalUsers: 18,
-        activeUsers: 18,
-        usersByRole: {
-          admin: 1,
-          chef_secteur: 4,
-          chef_service: 4,
-          ingenieur: 4,
-          collaborateur: 5,
-        },
+        recentPannes: []
       };
       setStats(mockStats);
     } finally {
@@ -128,21 +96,83 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Dashboard public si pas d'utilisateur connecté
+  const handleDeclarePanne = async () => {
+    if (!newPanne.titre || !newPanne.description) {
+      alert('Veuillez remplir le titre et la description de la panne');
+      return;
+    }
+
+    try {
+      setIsSubmittingPanne(true);
+      
+      // Add user's site, secteur, and service if available
+      const panneData: NouvellePanne = {
+        ...newPanne,
+        site: typeof user?.site === 'object' ? user.site._id : user?.site,
+        secteur: typeof user?.secteur === 'object' ? user.secteur._id : user?.secteur,
+        service: typeof user?.service === 'object' ? user.service._id : user?.service,
+      };
+
+      const createdPanne = await astreinteService.declarerPanne(panneData);
+      
+      if (createdPanne) {
+        console.log('🚨 Panne déclarée avec succès:', createdPanne);
+        
+        // Reset form and close modal
+        setNewPanne({
+          titre: '',
+          description: '',
+          type: 'technique',
+          urgence: 'moyenne',
+          priorite: 'normale'
+        });
+        setShowPanneModal(false);
+        
+        // Reload dashboard data to show the new panne
+        await loadDashboardData();
+        
+        // Show success message
+        alert('Panne déclarée avec succès !');
+      }
+    } catch (error) {
+      console.error('❌ Erreur déclaration panne:', error);
+      alert('Erreur lors de la déclaration de la panne. Veuillez réessayer.');
+    } finally {
+      setIsSubmittingPanne(false);
+    }
+  };
+
+  const getUrgenceColor = (urgence: string) => {
+    switch (urgence) {
+      case 'faible': return 'bg-green-100 text-green-800';
+      case 'moyenne': return 'bg-yellow-100 text-yellow-800';
+      case 'haute': return 'bg-orange-100 text-orange-800';
+      case 'critique': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatutColor = (statut: string) => {
+    switch (statut) {
+      case 'declaree': return 'bg-blue-100 text-blue-800';
+      case 'ouverte': return 'bg-yellow-100 text-yellow-800';
+      case 'en_cours': return 'bg-orange-100 text-orange-800';
+      case 'resolue': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Public dashboard
   if (!user) {
     return (
       <div className="space-y-6">
-        {/* En-tête de bienvenue public */}
         <div className="bg-gradient-to-r from-ocp-primary to-ocp-accent rounded-xl p-6 text-white">
           <h1 className="text-2xl font-bold">Astreinte Weekends OCP</h1>
           <p className="mt-2 opacity-90">
-            Planning des astreintes weekends (Samedi & Dimanche) du Groupe OCP
+            Planning des astreintes weekends (Samedi & Dimanche) et jours fériés marocains
           </p>
           <div className="mt-4 flex items-center space-x-4">
-            <a
-              href="/login"
-              className="inline-flex items-center px-4 py-2 bg-white text-ocp-primary rounded-lg font-medium hover:bg-gray-100 transition-colors"
-            >
+            <a href="/login" className="inline-flex items-center px-4 py-2 bg-white text-ocp-primary rounded-lg font-medium hover:bg-gray-100 transition-colors">
               Se connecter pour plus de fonctionnalités
             </a>
             <div className="text-sm opacity-90">
@@ -150,19 +180,138 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Planning Principal - Accessible à tous */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Filtres */}
-          <div className="lg:col-span-1">
-            <PlanningFilters
-              filters={planningFilters}
-              onFiltersChange={setPlanningFilters}
-            />
+        <Card>
+        <Card.Header>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <ExclamationTriangleIcon className="h-6 w-6 mr-2 text-red-500" />
+              Déclaration de Pannes
+            </h2>
+            <Button 
+              variant="primary" 
+              onClick={() => setShowPanneModal(true)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Déclarer une Panne
+            </Button>
           </div>
+        </Card.Header>
+      </Card>
+      {showPanneModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Déclarer une Panne</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Titre de la Panne *
+                </label>
+                <input
+                  type="text"
+                  value={newPanne.titre}
+                  onChange={(e) => setNewPanne({...newPanne, titre: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Titre de la panne..."
+                />
+              </div>
 
-          {/* Calendrier */}
-          <div className="lg:col-span-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <textarea
+                  value={newPanne.description}
+                  onChange={(e) => setNewPanne({...newPanne, description: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  rows={3}
+                  placeholder="Décrivez la panne en détail..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <select
+                    value={newPanne.type}
+                    onChange={(e) => setNewPanne({...newPanne, type: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="technique">Technique</option>
+                    <option value="securite">Sécurité</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="autre">Autre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Urgence
+                  </label>
+                  <select
+                    value={newPanne.urgence}
+                    onChange={(e) => setNewPanne({...newPanne, urgence: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="faible">Faible</option>
+                    <option value="moyenne">Moyenne</option>
+                    <option value="haute">Haute</option>
+                    <option value="critique">Critique</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Priorité
+                </label>
+                <select
+                  value={newPanne.priorite}
+                  onChange={(e) => setNewPanne({...newPanne, priorite: e.target.value as any})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="basse">Basse</option>
+                  <option value="normale">Normale</option>
+                  <option value="elevee">Élevée</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => setShowPanneModal(false)}
+                className="flex-1"
+                disabled={isSubmittingPanne}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDeclarePanne}
+                disabled={!newPanne.titre || !newPanne.description || isSubmittingPanne}
+                className="flex-1 bg-red-500 hover:bg-red-600"
+              >
+                {isSubmittingPanne ? 'Déclaration...' : 'Déclarer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-1">
+            <div className="space-y-4">
+              <PlanningFilters
+                filters={planningFilters}
+                onFiltersChange={setPlanningFilters}
+              />
+            </div>
+          </div>
+          <div className="lg:col-span-4">
             <PlanningCalendar
               filters={planningFilters}
               onFiltersChange={setPlanningFilters}
@@ -170,11 +319,10 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Informations complémentaires */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
             <Card.Header>
-              <h3 className="text-lg font-medium text-gray-900">Légende</h3>
+              <h3 className="text-lg font-medium text-gray-900">Légende Astreinte</h3>
             </Card.Header>
             <Card.Body>
               <div className="space-y-3">
@@ -187,16 +335,14 @@ const Dashboard: React.FC = () => {
                   <span className="text-sm text-gray-600">Collaborateurs de garde</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm"></span>
-                  <span className="text-sm text-gray-600">Astreinte weekend (24h)</span>
+                  <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                  <span className="text-sm text-gray-600">Jours fériés marocains</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm"></span>
-                  <span className="text-sm text-gray-600">Samedi & Dimanche uniquement</span>
+                <div className="text-sm text-gray-600">
+                  <strong>Garde weekend:</strong> Samedi 18h00 - Dimanche 08h00
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm"></span>
-                  <span className="text-sm text-gray-600">Permanence 24h/24</span>
+                <div className="text-sm text-gray-600">
+                  <strong>Garde férié:</strong> 24h/24
                 </div>
               </div>
             </Card.Body>
@@ -247,12 +393,8 @@ const Dashboard: React.FC = () => {
                     Gestion des plannings
                   </div>
                   <div className="flex items-center">
-                    <UserGroupIcon className="h-4 w-4 mr-2 text-ocp-primary" />
-                    Demandes d'indisponibilité
-                  </div>
-                  <div className="flex items-center">
-                    <ChartBarIcon className="h-4 w-4 mr-2 text-ocp-primary" />
-                    Rapports détaillés
+                    <ExclamationTriangleIcon className="h-4 w-4 mr-2 text-ocp-primary" />
+                    Déclaration de pannes
                   </div>
                 </div>
                 <Button variant="primary" className="w-full">
@@ -269,128 +411,10 @@ const Dashboard: React.FC = () => {
   const getWelcomeMessage = () => {
     const hour = new Date().getHours();
     let greeting = 'Bonjour';
-    
     if (hour < 12) greeting = 'Bonjour';
     else if (hour < 18) greeting = 'Bon après-midi';
     else greeting = 'Bonsoir';
-    
     return `${greeting}, ${user.firstName} !`;
-  };
-
-  const getRoleSpecificCards = () => {
-    switch (user.role) {
-      case 'admin':
-        return (
-          <>
-            <StatCard
-              title="Sites"
-              value={stats?.totalSites || 0}
-              icon={MapIcon}
-              color="blue"
-              href="/sites"
-            />
-            <StatCard
-              title="Secteurs"
-              value={stats?.totalSecteurs || 0}
-              icon={BuildingOfficeIcon}
-              color="green"
-              href="/secteurs"
-            />
-            <StatCard
-              title="Services"
-              value={stats?.totalServices || 0}
-              icon={WrenchScrewdriverIcon}
-              color="yellow"
-              href="/services"
-            />
-            <StatCard
-              title="Utilisateurs"
-              value={stats?.totalUsers || 0}
-              icon={UserGroupIcon}
-              color="purple"
-              href="/users"
-            />
-          </>
-        );
-      
-      case 'chef_secteur':
-        return (
-          <>
-            <StatCard
-              title="Mon Secteur"
-              value={getSecteurName(user.secteur)}
-              icon={BuildingOfficeIcon}
-              color="blue"
-              href="/mon-secteur"
-            />
-            <StatCard
-              title="Mes Services"
-              value="6" // À calculer dynamiquement
-              icon={WrenchScrewdriverIcon}
-              color="green"
-              href="/mes-services"
-            />
-            <StatCard
-              title="Planning"
-              value="Actuel"
-              icon={CalendarDaysIcon}
-              color="yellow"
-              href="/planning"
-            />
-          </>
-        );
-      
-      case 'chef_service':
-        return (
-          <>
-            <StatCard
-              title="Mon Service"
-              value={getServiceName(user.service)}
-              icon={WrenchScrewdriverIcon}
-              color="blue"
-              href="/mon-service"
-            />
-            <StatCard
-              title="Mon Équipe"
-              value="12" // À calculer dynamiquement
-              icon={UserGroupIcon}
-              color="green"
-              href="/mon-service"
-            />
-            <StatCard
-              title="Planning"
-              value="Actuel"
-              icon={CalendarDaysIcon}
-              color="yellow"
-              href="/planning"
-            />
-          </>
-        );
-      
-      case 'ingenieur':
-      case 'collaborateur':
-        return (
-          <>
-            <StatCard
-              title="Mes Gardes"
-              value="3" // À calculer dynamiquement
-              icon={CalendarDaysIcon}
-              color="blue"
-              href="/mes-gardes"
-            />
-            <StatCard
-              title="Planning"
-              value="Consulter"
-              icon={ChartBarIcon}
-              color="green"
-              href="/planning"
-            />
-          </>
-        );
-      
-      default:
-        return null;
-    }
   };
 
   if (isLoading) {
@@ -403,24 +427,26 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête de bienvenue */}
       <div className="bg-gradient-to-r from-ocp-primary to-ocp-accent rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{getWelcomeMessage()}</h1>
             <p className="mt-2 opacity-90">
-              Astreinte Weekends OCP - {getSiteName(user.site) || 'Tous sites'}
+              {(() => {
+                const siteLabel = user.site ? (typeof user.site === 'object' ? user.site.name : user.site) : 'Tous sites';
+                return `Astreinte Weekends OCP - ${siteLabel}`;
+              })()}
             </p>
             <div className="mt-4 flex items-center space-x-4">
               <Badge role={user.role} />
               {user.site && (
-                <span className="text-sm opacity-90"> {getSiteName(user.site)}</span>
+                <span className="text-sm opacity-90"> {typeof user.site === 'object' ? user.site.name : user.site}</span>
               )}
               {user.secteur && (
-                <span className="text-sm opacity-90"> {getSecteurName(user.secteur)}</span>
+                <span className="text-sm opacity-90"> {typeof user.secteur === 'object' ? user.secteur.name : user.secteur}</span>
               )}
               {user.service && (
-                <span className="text-sm opacity-90"> {getServiceName(user.service)}</span>
+                <span className="text-sm opacity-90"> {typeof user.service === 'object' ? user.service.name : user.service}</span>
               )}
             </div>
           </div>
@@ -439,210 +465,288 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Planning d'Astreinte - Composant Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Filtres */}
-        <div className="lg:col-span-1">
-          <PlanningFilters
-            filters={planningFilters}
-            onFiltersChange={setPlanningFilters}
-          />
-        </div>
-
-        {/* Calendrier */}
-        <div className="lg:col-span-3">
-          <PlanningCalendar
-            filters={planningFilters}
-            onFiltersChange={setPlanningFilters}
-          />
-        </div>
-      </div>
-
-      {/* Statistiques et Actions Rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {getRoleSpecificCards()}
-      </div>
-
-              {/* Informations détaillées */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Informations utilisateur */}
-          <Card>
-            <Card.Header>
-              <h3 className="text-lg font-medium text-gray-900">Mes Informations</h3>
-            </Card.Header>
-            <Card.Body>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Nom complet</span>
-                  <span className="text-sm font-medium">{user.firstName} {user.lastName}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Email</span>
-                  <span className="text-sm font-medium">{user.email}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Rôle</span>
-                  <Badge role={user.role} />
-                </div>
-                {user.site && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Site</span>
-                    <span className="text-sm font-medium">{getSiteName(user.site)}</span>
-                  </div>
-                )}
-                {user.secteur && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Secteur</span>
-                    <span className="text-sm font-medium">{getSecteurName(user.secteur)}</span>
-                  </div>
-                )}
-                {user.service && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Service</span>
-                    <span className="text-sm font-medium">{getServiceName(user.service)}</span>
-                  </div>
-                )}
+      <Card>
+        <Card.Header>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <ExclamationTriangleIcon className="h-6 w-6 mr-2 text-red-500" />
+              Déclaration de Pannes
+            </h2>
+            <Button 
+              variant="primary" 
+              onClick={() => setShowPanneModal(true)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Déclarer une Panne
+            </Button>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">
+                {stats?.recentPannes?.filter(p => p.statut === 'declaree').length || 0}
               </div>
-            </Card.Body>
-          </Card>
+              <div className="text-sm text-gray-600">Nouvelles</div>
+            </div>
+            <div className="text-center p-4 bg-yellow-50 rounded-lg">
+              <div className="text-2xl font-bold text-yellow-600">
+                {stats?.recentPannes?.filter(p => p.statut === 'en_cours').length || 0}
+              </div>
+              <div className="text-sm text-gray-600">En cours</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {stats?.recentPannes?.filter(p => p.statut === 'resolue').length || 0}
+              </div>
+              <div className="text-sm text-gray-600">Résolues</div>
+            </div>
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <div className="text-2xl font-bold text-gray-600">
+                {stats?.recentPannes?.length || 0}
+              </div>
+              <div className="text-sm text-gray-600">Total</div>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
 
-          {/* Activité récente */}
-          <Card>
-            <Card.Header>
-              <h3 className="text-lg font-medium text-gray-900">Activité Récente</h3>
-            </Card.Header>
-            <Card.Body>
-              {stats?.recentActivity && stats.recentActivity.length > 0 ? (
-                <div className="space-y-3">
-                  {stats.recentActivity.slice(0, 5).map((activity, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">{activity.description}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(activity.timestamp).toLocaleString('fr-FR')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500">Aucune activité récente</p>
-                </div>
+      <Card>
+        <Card.Header>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <CalendarDaysIcon className="h-6 w-6 mr-2 text-blue-500" />
+              Planning d'Astreinte Weekends & Jours Fériés
+            </h2>
+            <div className="flex space-x-2">
+              <Button
+                variant={viewMode === 'view' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setViewMode('view')}
+              >
+                <ChartBarIcon className="h-4 w-4 mr-2" />
+                Consulter
+              </Button>
+              {(user.role === 'admin' || user.role === 'chef_secteur' || user.role === 'chef_service') && (
+                <Button
+                  variant={viewMode === 'manage' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setViewMode('manage')}
+                >
+                  <WrenchScrewdriverIcon className="h-4 w-4 mr-2" />
+                  Gérer
+                </Button>
               )}
-            </Card.Body>
-          </Card>
+            </div>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {viewMode === 'view' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <div className="lg:col-span-1">
+                <div className="space-y-4">
+                  <PlanningFilters
+                    filters={planningFilters}
+                    onFiltersChange={setPlanningFilters}
+                  />
+                </div>
+              </div>
+              <div className="lg:col-span-4">
+                <PlanningCalendar
+                  filters={planningFilters}
+                  onFiltersChange={setPlanningFilters}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Gestion des Astreintes</h3>
+                <p className="text-sm text-blue-700">
+                  Déplacez les collaborateurs entre weekends, réorganisez la rotation, 
+                  et gérez les demandes d'indisponibilité.
+                </p>
+              </div>
+              {/* Gestion simple: ordre de rotation + calendrier visuel */}
+              <PlanningManager
+                secteurId={typeof user.secteur === 'object' ? (user.secteur._id || (user.secteur as any).id) : (user.secteur as any)}
+                serviceId={typeof user.service === 'object' ? (user.service?._id || (user.service as any)?.id) : (user.service as any)}
+                startDate={planningFilters.startDate}
+                endDate={planningFilters.endDate}
+                currentUserRole={user.role}
+              />
+              <WeekendHolidayCalendar
+                secteurId={typeof user.secteur === 'object' ? (user.secteur._id || (user.secteur as any).id) : (user.secteur as any)}
+                startDate={planningFilters.startDate}
+                endDate={planningFilters.endDate}
+              />
+            </div>
+          )}
+        </Card.Body>
+      </Card>
 
-        {/* Actions rapides */}
+      {stats?.recentPannes && stats.recentPannes.length > 0 && (
         <Card>
           <Card.Header>
-            <h3 className="text-lg font-medium text-gray-900">Actions Rapides</h3>
+            <h3 className="text-lg font-medium text-gray-900">Pannes Récentes</h3>
           </Card.Header>
           <Card.Body>
             <div className="space-y-3">
-              <Button variant="primary" className="w-full justify-start">
-                <CalendarDaysIcon className="h-5 w-5 mr-2" />
-                Consulter le Planning
-              </Button>
-              
-              {(user.role === 'chef_secteur' || user.role === 'chef_service') && (
-                <Button variant="secondary" className="w-full justify-start">
-                  <UserGroupIcon className="h-5 w-5 mr-2" />
-                  Gérer mon Équipe
-                </Button>
-              )}
-              
-              {user.role === 'admin' && (
-                <Button variant="secondary" className="w-full justify-start">
-                  <ChartBarIcon className="h-5 w-5 mr-2" />
-                  Voir les Rapports
-                </Button>
-              )}
-              
-              <Button variant="ghost" className="w-full justify-start">
-                <UserGroupIcon className="h-5 w-5 mr-2" />
-                Modifier mon Profil
-              </Button>
+              {stats.recentPannes.slice(0, 5).map((panne) => (
+                <div key={panne.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      panne.statut === 'declaree' ? 'bg-blue-500' :
+                      panne.statut === 'en_cours' ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">{panne.titre}</p>
+                      <p className="text-sm text-gray-500">
+                        {panne.site?.name || 'Tous sites'} • {panne.secteur?.name || 'Tous secteurs'} • 
+                        Déclarée par {panne.declaredBy ? `${panne.declaredBy.firstName} ${panne.declaredBy.lastName}` : 'Inconnu'}
+                      </p>
+                      <div className="flex space-x-2 mt-1">
+                        <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(panne.type)}`}>
+                          {panne.type}
+                        </span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${getUrgenceColor(panne.urgence)}`}>
+                          {panne.urgence}
+                        </span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${getStatutColor(panne.statut)}`}>
+                          {panne.statut}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">
+                      {new Date(panne.dateCreation).toLocaleString('fr-FR')}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card.Body>
         </Card>
-      </div>
+      )}
+
+      {showPanneModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Déclarer une Panne</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Titre de la Panne *
+                </label>
+                <input
+                  type="text"
+                  value={newPanne.titre}
+                  onChange={(e) => setNewPanne({...newPanne, titre: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Titre de la panne..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <textarea
+                  value={newPanne.description}
+                  onChange={(e) => setNewPanne({...newPanne, description: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  rows={3}
+                  placeholder="Décrivez la panne en détail..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <select
+                    value={newPanne.type}
+                    onChange={(e) => setNewPanne({...newPanne, type: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="technique">Technique</option>
+                    <option value="securite">Sécurité</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="autre">Autre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Urgence
+                  </label>
+                  <select
+                    value={newPanne.urgence}
+                    onChange={(e) => setNewPanne({...newPanne, urgence: e.target.value as any})}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="faible">Faible</option>
+                    <option value="moyenne">Moyenne</option>
+                    <option value="haute">Haute</option>
+                    <option value="critique">Critique</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Priorité
+                </label>
+                <select
+                  value={newPanne.priorite}
+                  onChange={(e) => setNewPanne({...newPanne, priorite: e.target.value as any})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="basse">Basse</option>
+                  <option value="normale">Normale</option>
+                  <option value="elevee">Élevée</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => setShowPanneModal(false)}
+                className="flex-1"
+                disabled={isSubmittingPanne}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDeclarePanne}
+                disabled={!newPanne.titre || !newPanne.description || isSubmittingPanne}
+                className="flex-1 bg-red-500 hover:bg-red-600"
+              >
+                {isSubmittingPanne ? 'Déclaration...' : 'Déclarer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// Composant StatCard
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ComponentType<any>;
-  color: 'blue' | 'green' | 'yellow' | 'purple';
-  href?: string;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, href }) => {
-  const colorClasses = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    purple: 'bg-purple-500',
-  };
-
-  const content = (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-      <Card.Body>
-        <div className="flex items-center">
-          <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-            <Icon className="h-6 w-6 text-white" />
-          </div>
-          <div className="ml-4">
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p className="text-2xl font-semibold text-gray-900">{value}</p>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-
-  if (href) {
-    return <a href={href}>{content}</a>;
+// Helper function for type colors
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'technique': return 'bg-blue-100 text-blue-800';
+    case 'securite': return 'bg-red-100 text-red-800';
+    case 'maintenance': return 'bg-purple-100 text-purple-800';
+    case 'autre': return 'bg-gray-100 text-gray-800';
+    default: return 'bg-gray-100 text-gray-800';
   }
-
-  return content;
-};
-
-// Composant PublicStatCard pour le dashboard public
-interface PublicStatCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ComponentType<any>;
-  color: 'blue' | 'green' | 'yellow' | 'purple';
-}
-
-const PublicStatCard: React.FC<PublicStatCardProps> = ({ title, value, icon: Icon, color }) => {
-  const colorClasses = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    purple: 'bg-purple-500',
-  };
-
-  return (
-    <Card>
-      <Card.Body>
-        <div className="flex items-center">
-          <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-            <Icon className="h-6 w-6 text-white" />
-          </div>
-          <div className="ml-4">
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p className="text-2xl font-semibold text-gray-900">{value}</p>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
 };
 
 export default Dashboard;

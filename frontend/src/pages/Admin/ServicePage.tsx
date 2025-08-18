@@ -107,14 +107,16 @@ const ServicePage: React.FC = () => {
     try {
       if (currentSecteurId) {
         const secteurId = typeof currentSecteurId === 'string' ? currentSecteurId : currentSecteurId._id;
-        const response = await apiService.getSecteurById(secteurId);
+        // Fallback: get secteur info from all secteurs and pick the one
+        const response = await apiService.getAllSecteurs();
+        const secteur = (response.data || []).find((s: Secteur) => s._id === secteurId);
         if (response.data) {
           // Update the secteur in the list without changing selectedSecteur
-          setSecteurs(prev => prev.map(s => s._id === secteurId ? response.data! : s));
+          setSecteurs(prev => prev.map(s => s._id === secteurId ? (secteur as Secteur) : s));
 
           // Get site info
-          if (response.data?.site && typeof response.data.site === 'object') {
-            const siteResponse = await apiService.getSiteById(response.data.site._id);
+          if (secteur?.site && typeof secteur.site === 'object') {
+            const siteResponse = await apiService.getSiteById(secteur.site._id);
             setSite(siteResponse.data || null);
           }
         }
@@ -135,11 +137,12 @@ const ServicePage: React.FC = () => {
       } else if (canManageSecteurServices && user?.secteur) {
         // Chef secteur can see all services in their secteur
         const secteurId = typeof user.secteur === 'string' ? user.secteur : user.secteur._id;
-        const secteurResponse = await apiService.getSecteurById(secteurId);
-        if (secteurResponse.data && secteurResponse.data.site) {
-          const siteId = typeof secteurResponse.data.site === 'string'
-            ? secteurResponse.data.site
-            : secteurResponse.data.site._id;
+        const allSecteursResp = await apiService.getAllSecteurs();
+        const secteur = (allSecteursResp.data || []).find((s: Secteur) => s._id === secteurId);
+        if (secteur && secteur.site) {
+          const siteId = typeof secteur.site === 'string'
+            ? secteur.site
+            : secteur.site._id;
           const response = await apiService.getServices(siteId, secteurId);
           setServices(response.data || []);
         }

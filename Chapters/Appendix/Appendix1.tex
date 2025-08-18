@@ -1,0 +1,188 @@
+\appendix
+\chapter{Annexe Technique}
+
+\section{Configuration de l'environnement}
+\subsection{Variables d'environnement}
+\begin{lstlisting}[language=bash, caption=Configuration des variables d'environnement]
+# Base de données
+MONGODB_URI=mongodb://localhost:27017/ocp_astreinte
+JWT_SECRET=your_jwt_secret_key_here
+JWT_EXPIRES_IN=24h
+
+# Serveur
+PORT=5000
+NODE_ENV=development
+
+# Sécurité
+CORS_ORIGIN=http://localhost:3000
+RATE_LIMIT_MAX=100
+\end{lstlisting}
+
+\subsection{Scripts de démarrage}
+\begin{lstlisting}[language=json, caption=Scripts package.json]
+{
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "npm run build:frontend && npm run build:backend",
+    "test": "jest",
+    "lint": "eslint ."
+  }
+}
+\end{lstlisting}
+
+\section{Modèles de données}
+\subsection{Modèle utilisateur}
+\begin{lstlisting}[language=JavaScript, caption=Modèle utilisateur simplifié]
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true, minlength: 8 },
+  firstName: { type: String, required: true, maxlength: 50 },
+  lastName: { type: String, required: true, maxlength: 50 },
+  phone: { type: String, match: /^(\+212|0)[5-7][0-9]{8}$/ },
+  role: { 
+    type: String, 
+    enum: ['admin', 'chef_site', 'chef_secteur', 'chef_service', 'ingenieur', 'collaborateur'],
+    default: 'collaborateur' 
+  },
+  site: { type: mongoose.Schema.Types.ObjectId, ref: 'Site' },
+  secteur: { type: mongoose.Schema.Types.ObjectId, ref: 'Secteur' },
+  service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+// Hash du mot de passe
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
+  next();
+});
+\end{lstlisting}
+
+\subsection{Modèle secteur}
+\begin{lstlisting}[language=JavaScript, caption=Modèle secteur simplifié]
+const secteurSchema = new mongoose.Schema({
+  name: { 
+    type: String, 
+    required: true, 
+    enum: ['Traitement', 'Extraction', 'Maintenance', 'Logistique', 'Qualité'],
+    unique: true 
+  },
+  code: { type: String, required: true, unique: true, uppercase: true },
+  description: { type: String, maxlength: 500 },
+  site: { type: mongoose.Schema.Types.ObjectId, ref: 'Site', required: true },
+  chefSecteur: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+\end{lstlisting}
+
+\section{API Endpoints}
+\subsection{Authentification}
+\begin{lstlisting}[language=JavaScript, caption=Routes d'authentification]
+// Routes publiques
+router.post('/login', login);
+router.post('/register', register);
+
+// Routes protégées
+router.post('/logout', authenticateToken, logout);
+router.get('/profile', authenticateToken, getProfile);
+\end{lstlisting}
+
+\subsection{Gestion des utilisateurs}
+\begin{lstlisting}[language=JavaScript, caption=Routes utilisateurs]
+// Toutes les routes nécessitent une authentification
+router.use(authenticateToken);
+
+router.get('/', getUsers);
+router.get('/:id', getUserById);
+router.post('/', authorizeRole(['admin', 'chef_site']), createUser);
+router.put('/:id', authorizeRole(['admin', 'chef_site']), updateUser);
+router.delete('/:id', authorizeRole(['admin']), deleteUser);
+\end{lstlisting}
+
+\section{Sécurité}
+\subsection{Authentification JWT}
+\begin{lstlisting}[language=JavaScript, caption=Middleware d'authentification simplifié]
+export const authenticateToken = async (req, res, next) => {
+  try {
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Token requis' });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select('-password');
+    
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: 'Utilisateur non trouvé' });
+    }
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Token invalide' });
+  }
+};
+\end{lstlisting}
+
+\subsection{Autorisation par rôle}
+\begin{lstlisting}[language=JavaScript, caption=Middleware d'autorisation simplifié]
+export const authorizeRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+    next();
+  };
+};
+\end{lstlisting}
+
+\section{Validation des données}
+\subsection{Schémas Joi simplifiés}
+\begin{lstlisting}[language=JavaScript, caption=Validation simplifiée]
+// Validation secteur
+export const createSecteurSchema = Joi.object({
+  name: Joi.string().valid('Traitement', 'Extraction', 'Maintenance', 'Logistique', 'Qualité').required(),
+  code: Joi.string().min(2).max(10).pattern(/^[A-Z0-9]+$/).required(),
+  description: Joi.string().max(500).optional(),
+  site: Joi.string().hex().length(24).required()
+});
+
+// Validation utilisateur
+export const createUserSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+  firstName: Joi.string().min(2).max(50).required(),
+  lastName: Joi.string().min(2).max(50).required(),
+  role: Joi.string().valid('admin', 'chef_site', 'chef_secteur', 'chef_service', 'ingenieur', 'collaborateur').required()
+});
+\end{lstlisting}
+
+\section{Configuration de sécurité}
+\subsection{Helmet et Rate Limiting}
+\begin{lstlisting}[language=JavaScript, caption=Configuration de sécurité simplifiée]
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+
+// Configuration Helmet
+app.use(helmet());
+
+// Rate limiting général
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // 100 requêtes par IP
+});
+app.use(limiter);
+
+// Rate limiting pour l'authentification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5 // 5 tentatives de connexion
+});
+app.use('/api/auth', authLimiter);
+\end{lstlisting}
+
+Cette annexe technique simplifiée fournit les informations essentielles pour comprendre et maintenir le système OCP Astreinte, en se concentrant sur les éléments clés de l'architecture et de la sécurité.

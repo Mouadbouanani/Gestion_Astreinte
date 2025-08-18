@@ -89,33 +89,34 @@ const SecteurDashboard: React.FC<SecteurDashboardProps> = ({ siteId }) => {
       // Load secteurs with statistics
       if (typeof currentSiteId === 'string') {
         const secteursResponse = await apiService.getSecteurs(currentSiteId);
-        const secteursWithStats = await Promise.all(
-          (secteursResponse.data || []).map(async (secteur: Secteur) => {
-            try {
-              const secteurDetailResponse = await apiService.getSecteurById(secteur._id);
-              return secteurDetailResponse.data as SecteurWithStats;
-            } catch (error) {
-              console.error(`Error loading secteur ${secteur._id}:`, error);
-              return {
-                ...secteur,
-                statistics: {
-                  servicesCount: 0,
-                  usersCount: 0,
-                  usersByRole: {
-                    chefSecteur: 0,
-                    ingenieurs: 0,
-                    chefsService: 0,
-                    collaborateurs: 0
-                  },
-                  servicesActifs: 0,
-                  servicesInactifs: 0
-                },
-                services: [],
-                users: []
-              } as SecteurWithStats;
-            }
-          })
-        );
+        // Backend returns secteurs enriched with statistics in /org/sites/:siteId/secteurs
+        const secteursWithStats = (secteursResponse.data || []).map((secteur: any) => {
+          const base: Secteur = {
+            _id: secteur._id || secteur.id,
+            name: secteur.name,
+            code: secteur.code,
+            description: secteur.description,
+            site: secteur.site,
+            isActive: secteur.isActive ?? true,
+            createdAt: secteur.createdAt,
+            updatedAt: secteur.updatedAt,
+          } as Secteur;
+
+          const stats = secteur.statistics || {
+            servicesCount: secteur.servicesCount || 0,
+            usersCount: secteur.usersCount || 0,
+            usersByRole: secteur.usersByRole || { chefSecteur: 0, ingenieurs: 0, chefsService: 0, collaborateurs: 0 },
+            servicesActifs: 0,
+            servicesInactifs: 0,
+          };
+
+          return {
+            ...base,
+            statistics: stats,
+            services: secteur.services || [],
+            users: secteur.users || [],
+          } as SecteurWithStats;
+        });
 
         setSecteurs(secteursWithStats);
 

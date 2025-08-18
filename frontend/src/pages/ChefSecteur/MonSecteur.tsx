@@ -199,8 +199,8 @@ const MonSecteur: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {services.map((service) => (
-                <div key={service._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              {services.map((service, idx) => (
+                <div key={service._id || `${service.code}-${idx}`} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-medium text-gray-900">{service.name}</h3>
                     <Badge variant={service.isActive ? 'success' : 'error'}>
@@ -250,8 +250,8 @@ const MonSecteur: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ingenieurs.map((ingenieur) => (
-                <div key={ingenieur._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              {ingenieurs.map((ingenieur, idx) => (
+                <div key={ingenieur._id || `${ingenieur.email}-${idx}`} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-center space-x-3 mb-3">
                     <div className="h-10 w-10 rounded-full bg-ocp-primary flex items-center justify-center">
                       <span className="text-white font-medium">

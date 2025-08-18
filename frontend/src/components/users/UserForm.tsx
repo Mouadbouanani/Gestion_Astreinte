@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User } from '@/types';
 import type { CreateUserForm, UpdateUserForm, Site, Secteur, Service } from '@/types';
 import { apiService } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -21,6 +22,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   onClose,
   onSuccess
 }) => {
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<Site[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
@@ -124,7 +126,22 @@ export const UserForm: React.FC<UserFormProps> = ({
     try {
       const response = await apiService.getSites();
       if (response.success && response.data) {
-        setSites(response.data);
+        // If the logged-in user is not admin, restrict to their site
+        if (currentUser && currentUser.role !== 'admin' && currentUser.site) {
+          const userSiteObj = typeof currentUser.site === 'object' ? currentUser.site as any : undefined;
+          // Prefer object site when available, otherwise find by id
+          if (userSiteObj?._id) {
+            setSites([userSiteObj]);
+            setFormData((prev: any) => ({ ...prev, site: getSafeValue(userSiteObj._id) }));
+          } else {
+            const siteId = getSafeValue(currentUser.site as any);
+            const found = response.data.find((s) => getSafeValue((s as any)._id) === siteId);
+            setSites(found ? [found] : response.data);
+            if (found) setFormData((prev: any) => ({ ...prev, site: siteId }));
+          }
+        } else {
+          setSites(response.data);
+        }
       }
     } catch (error) {
       console.error('Error fetching sites:', error);
@@ -139,7 +156,22 @@ export const UserForm: React.FC<UserFormProps> = ({
 
       const response = await apiService.getSecteurs(actualSiteId);
       if (response.success && response.data) {
-        setSecteurs(response.data);
+        // If the logged-in user is not admin or chef_secteur, restrict to their secteur
+        if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'chef_secteur' && currentUser.secteur) {
+          const userSecteurObj = typeof currentUser.secteur === 'object' ? currentUser.secteur as any : undefined;
+          if (userSecteurObj?._id) {
+            const only = response.data.find((sec) => getSafeValue((sec as any)._id) === getSafeValue(userSecteurObj._id));
+            setSecteurs(only ? [only] : response.data);
+            if (only) setFormData((prev: any) => ({ ...prev, secteur: getSafeValue(userSecteurObj._id) }));
+          } else {
+            const secteurId = getSafeValue(currentUser.secteur as any);
+            const found = response.data.find((sec) => getSafeValue((sec as any)._id) === secteurId);
+            setSecteurs(found ? [found] : response.data);
+            if (found) setFormData((prev: any) => ({ ...prev, secteur: secteurId }));
+          }
+        } else {
+          setSecteurs(response.data);
+        }
       }
     } catch (error) {
       console.error('Error fetching secteurs:', error);
@@ -156,7 +188,19 @@ export const UserForm: React.FC<UserFormProps> = ({
       // Use the legacy method that accepts secteurId only
       const response = await apiService.getServicesBySecteur(actualSecteurId);
       if (response.success && response.data) {
-        setServices(response.data);
+        // If the logged-in user is NOT admin, NOT chef_secteur, NOT ingenieur,
+        // then restrict services to the one assigned to the user (chef_service/collaborateur)
+        const restrictedRoles = ['chef_service', 'collaborateur'];
+        if (currentUser && restrictedRoles.includes(currentUser.role) && currentUser.service) {
+          const userServiceId = getSafeValue(currentUser.service as any);
+          const filtered = response.data.filter((srv) => getSafeValue((srv as any)._id) === userServiceId);
+          setServices(filtered.length > 0 ? filtered : response.data);
+          if (filtered.length > 0) {
+            setFormData((prev: any) => ({ ...prev, service: userServiceId }));
+          }
+        } else {
+          setServices(response.data);
+        }
       }
     } catch (error) {
       console.error('Error fetching services:', error);

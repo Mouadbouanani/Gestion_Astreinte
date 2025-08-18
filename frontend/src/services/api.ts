@@ -544,6 +544,11 @@ class ApiService {
     const userStr = localStorage.getItem('ocp_user');
     return userStr ? JSON.parse(userStr) : null;
   }
+
+  // Expose configured Axios instance safely for service modules
+  public get client(): AxiosInstance {
+    return this.api;
+  }
 }
 
 // Instance singleton

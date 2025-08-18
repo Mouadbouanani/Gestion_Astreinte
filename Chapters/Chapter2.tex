@@ -1,0 +1,281 @@
+\chapter{Analyse des Besoins et Conception du Système}
+
+\section{Analyse des besoins fonctionnels}
+\subsection{Acteurs du système}
+Le système de gestion des astreintes OCP implique plusieurs catégories d'utilisateurs avec des rôles et permissions distincts :
+
+\begin{description}
+    \item[\textbf{Administrateur}] Accès complet au système, gestion des utilisateurs, sites, secteurs et services
+    \item[\textbf{Chef de Site}] Gestion des secteurs et services de son site, vue d'ensemble des équipes
+    \item[\textbf{Chef de Secteur}] Gestion des services de son secteur, vue des ingénieurs et collaborateurs
+    \item[\textbf{Chef de Service}] Gestion de son équipe, planification des astreintes
+    \item[\textbf{Ingénieur}] Consultation des plannings, gestion de ses disponibilités
+    \item[\textbf{Collaborateur}] Consultation des plannings, notification des indisponibilités
+\end{description}
+
+\subsection{Fonctionnalités principales}
+\subsubsection{Gestion des utilisateurs}
+\begin{itemize}
+    \item Création et modification des comptes utilisateurs
+    \item Attribution des rôles et permissions
+    \item Gestion des profils et informations personnelles
+    \item Authentification sécurisée avec JWT
+\end{itemize}
+
+\subsubsection{Gestion organisationnelle}
+\begin{itemize}
+    \item Création et gestion des sites industriels
+    \item Organisation hiérarchique : Sites → Secteurs → Services
+    \item Gestion des secteurs (Traitement, Extraction, Maintenance, Logistique, Qualité)
+    \item Gestion des services au sein de chaque secteur
+\end{itemize}
+
+\subsubsection{Gestion des astreintes}
+\begin{itemize}
+    \item Création et modification des plannings d'astreinte
+    \item Gestion des disponibilités et indisponibilités
+    \item Système d'escalade automatique
+    \item Notifications et alertes en temps réel
+\end{itemize}
+
+\subsubsection{Tableaux de bord et rapports}
+\begin{itemize}
+    \item Vue d'ensemble des équipes par site/secteur/service
+    \item Statistiques de couverture des astreintes
+    \item Historique des modifications et actions
+    \item Rapports d'activité et de performance
+\end{itemize}
+
+\section{Analyse des besoins non fonctionnels}
+\subsection{Performance}
+\begin{itemize}
+    \item Temps de réponse < 2 secondes pour les opérations courantes
+    \item Support de 100+ utilisateurs simultanés
+    \item Gestion efficace des requêtes de base de données
+\end{itemize}
+
+\subsection{Sécurité}
+\begin{itemize}
+    \item Authentification forte avec tokens JWT
+    \item Chiffrement des données sensibles
+    \item Gestion fine des permissions par rôle
+    \item Audit trail de toutes les actions
+\end{itemize}
+
+\subsection{Disponibilité}
+\begin{itemize}
+    \item Disponibilité 99.9\% (8.76 heures d'indisponibilité par an)
+    \item Sauvegarde automatique des données
+    \item Procédures de récupération en cas de panne
+\end{itemize}
+
+\subsection{Maintenabilité}
+\begin{itemize}
+    \item Architecture modulaire et extensible
+    \item Code documenté et suivant les bonnes pratiques
+    \item Tests automatisés pour les fonctionnalités critiques
+    \item Documentation technique complète
+\end{itemize}
+
+\section{Architecture générale du système}
+\subsection{Architecture en couches}
+Le système suit une architecture en trois couches principales :
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/architecture-generale.png}
+\caption{Architecture générale du système OCP Astreinte}
+\label{fig:architecture-generale}
+\end{figure}
+
+\subsubsection{Couche présentation (Frontend)}
+\begin{itemize}
+    \item Interface utilisateur React avec TypeScript
+    \item Composants modulaires et réutilisables
+    \item Design responsive avec Tailwind CSS
+    \item Gestion d'état locale avec React Hooks
+\end{itemize}
+
+\subsubsection{Couche logique métier (Backend)}
+\begin{itemize}
+    \item API REST avec Node.js et Express
+    \item Contrôleurs pour la logique métier
+    \item Middleware d'authentification et d'autorisation
+    \item Validation des données avec Joi
+\end{itemize}
+
+\subsubsection{Couche données (Base de données)}
+\begin{itemize}
+    \item Base de données MongoDB
+    \item Modèles Mongoose pour la validation
+    \item Indexation optimisée pour les requêtes fréquentes
+    \item Sauvegarde et réplication
+\end{itemize}
+
+\section{Modèles de données}
+\subsection{Modèle utilisateur}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{images/modele-utilisateur.png}
+\caption{Modèle de données utilisateur}
+\label{fig:modele-utilisateur}
+\end{figure}
+
+Le modèle utilisateur inclut :
+\begin{itemize}
+    \item Informations d'identification (email, mot de passe hashé)
+    \item Informations personnelles (nom, prénom, téléphone)
+    \item Rôle et permissions dans le système
+    \item Affectation organisationnelle (site, secteur, service)
+    \item Préférences et paramètres personnels
+\end{itemize}
+
+\subsection{Modèle organisationnel}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/modele-organisationnel.png}
+\caption{Modèle de données organisationnel}
+\label{fig:modele-organisationnel}
+\end{figure}
+
+L'organisation suit une hiérarchie stricte :
+\begin{itemize}
+    \item \textbf{Sites} : Unités géographiques (ex: Khouribga, Youssoufia)
+    \item \textbf{Secteurs} : Divisions fonctionnelles (ex: Traitement, Maintenance)
+    \item \textbf{Services} : Équipes opérationnelles au sein des secteurs
+\end{itemize}
+
+\subsection{Modèle des astreintes}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{images/modele-astreinte.png}
+\caption{Modèle de données des astreintes}
+\label{fig:modele-astreinte}
+\end{figure}
+
+Le système de gestion des astreintes comprend :
+\begin{itemize}
+    \item Planning des astreintes par service
+    \item Gestion des disponibilités individuelles
+    \item Système d'escalade en cas d'indisponibilité
+    \item Historique et traçabilité des modifications
+\end{itemize}
+
+\section{Interfaces utilisateur}
+\subsection{Principes de design}
+\begin{itemize}
+    \item \textbf{Simplicité} : Interface claire et intuitive
+    \item \textbf{Consistance} : Cohérence visuelle et comportementale
+    \item \textbf{Efficacité} : Accès rapide aux fonctionnalités principales
+    \item \textbf{Responsivité} : Adaptation aux différents écrans
+\end{itemize}
+
+\subsection{Pages principales}
+\subsubsection{Dashboard principal}
+\begin{itemize}
+    \item Vue d'ensemble des sites et secteurs
+    \item Statistiques en temps réel
+    \item Accès rapide aux fonctionnalités principales
+    \item Notifications et alertes
+\end{itemize}
+
+\subsubsection{Gestion des secteurs}
+\begin{itemize}
+    \item Liste des secteurs avec statistiques
+    \item Création et modification des secteurs
+    \item Gestion des services associés
+    \item Vue des équipes par secteur
+\end{itemize}
+
+\subsubsection{Gestion des services}
+\begin{itemize}
+    \item Liste des services par secteur
+    \item Gestion des équipes et des astreintes
+    \item Planification des plannings
+    \item Suivi des disponibilités
+\end{itemize}
+
+\subsubsection{Mon secteur/Mon service}
+\begin{itemize}
+    \item Vue personnalisée selon le rôle
+    \item Gestion des équipes sous responsabilité
+    \item Consultation des plannings
+    \item Actions rapides
+\end{itemize}
+
+\section{Sécurité et permissions}
+\subsection{Système d'authentification}
+\begin{itemize}
+    \item Connexion sécurisée avec email/mot de passe
+    \item Génération de tokens JWT avec expiration
+    \item Refresh automatique des tokens
+    \item Déconnexion sécurisée
+\end{itemize}
+
+\subsection{Gestion des permissions}
+\begin{itemize}
+    \item Permissions basées sur les rôles (RBAC)
+    \item Contrôle d'accès aux ressources
+    \item Filtrage automatique des données selon le contexte
+    \item Audit des actions utilisateur
+\end{itemize}
+
+\subsection{Sécurité des données}
+\begin{itemize}
+    \item Chiffrement des mots de passe avec bcrypt
+    \item Validation et sanitisation des entrées
+    \item Protection contre les injections et attaques XSS
+    \item Headers de sécurité avec Helmet
+\end{itemize}
+
+\section{Intégrations et API}
+\subsection{API REST}
+Le système expose une API REST complète pour :
+\begin{itemize}
+    \item Gestion des utilisateurs et authentification
+    \item Gestion des sites, secteurs et services
+    \item Gestion des astreintes et plannings
+    \item Consultation des statistiques et rapports
+\end{itemize}
+
+\subsection{Format des réponses}
+\begin{itemize}
+    \item Réponses JSON standardisées
+    \item Codes de statut HTTP appropriés
+    \item Gestion d'erreurs détaillée
+    \item Pagination pour les listes volumineuses
+\end{itemize}
+
+\subsection{Documentation API}
+\begin{itemize}
+    \item Documentation interactive avec exemples
+    \item Schémas de validation des données
+    \item Codes d'erreur et messages
+    \item Exemples de requêtes et réponses
+\end{itemize}
+
+\section{Considérations techniques}
+\subsection{Technologies choisies}
+\begin{itemize}
+    \item \textbf{Frontend} : React 19, TypeScript, Tailwind CSS
+    \item \textbf{Backend} : Node.js, Express, MongoDB
+    \item \textbf{Base de données} : MongoDB avec Mongoose
+    \item \textbf{Authentification} : JWT, bcrypt
+\end{itemize}
+
+\subsection{Justification des choix}
+\begin{itemize}
+    \item \textbf{React} : Écosystème mature, composants réutilisables
+    \item \textbf{Node.js} : Performance, écosystème npm riche
+    \item \textbf{MongoDB} : Flexibilité du schéma, performance
+    \item \textbf{TypeScript} : Sécurité des types, meilleure maintenabilité
+\end{itemize}
+
+\subsection{Alternatives considérées}
+\begin{itemize}
+    \item \textbf{Frontend} : Vue.js, Angular (moins adaptés aux besoins)
+    \item \textbf{Backend} : Python/Django, Java/Spring (complexité accrue)
+    \item \textbf{Base de données} : PostgreSQL, MySQL (rigidité du schéma)
+\end{itemize}
+
+Cette phase de conception a permis de définir précisément les besoins du système et d'établir une architecture robuste et évolutive, adaptée aux contraintes opérationnelles d'OCP.

@@ -19,7 +19,11 @@ export const authenticateToken = async (req, res, next) => {
     const decoded = verifyToken(token);
     
     // Vérifier que l'utilisateur existe toujours
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id)
+      .populate('service', '_id name code')
+      .populate('secteur', '_id name code')
+      .populate('site', '_id name code')
+      .select('-password');
     if (!user) {
       return res.status(401).json({
         success: false,

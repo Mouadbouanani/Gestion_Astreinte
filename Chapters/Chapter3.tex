@@ -1,0 +1,360 @@
+\chapter{Implémentation Technique et Développement}
+
+\section{Environnement de développement}
+\subsection{Configuration de l'environnement}
+Le développement du système OCP Astreinte s'est déroulé dans un environnement technique moderne et standardisé :
+
+\begin{itemize}
+    \item \textbf{Système d'exploitation} : Windows 10/11, Linux Ubuntu
+    \item \textbf{Éditeur de code} : Visual Studio Code avec extensions spécialisées
+    \item \textbf{Versioning} : Git avec GitHub pour la gestion des versions
+    \item \textbf{Base de données} : MongoDB Atlas (cloud) et MongoDB local pour le développement
+    \item \textbf{API Testing} : Postman pour les tests d'API
+\end{itemize}
+
+\subsection{Outils de développement}
+\begin{itemize}
+    \item \textbf{Node.js} : Version 18+ pour le backend
+    \item \textbf{npm} : Gestionnaire de paquets pour les dépendances
+    \item \textbf{ESLint} : Linting et formatage du code
+    \item \textbf{Prettier} : Formatage automatique du code
+    \item \textbf{TypeScript} : Compilateur et vérificateur de types
+\end{itemize}
+
+\section{Architecture technique détaillée}
+\subsection{Structure du projet}
+Le projet est organisé en deux parties principales avec une architecture claire :
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{images/structure-projet.png}
+\caption{Structure détaillée du projet OCP Astreinte}
+\label{fig:structure-projet}
+\end{figure}
+
+\subsubsection{Frontend (dossier \texttt{frontend/})}
+\begin{itemize}
+    \item \texttt{src/pages/} : Pages principales de l'application
+    \item \texttt{src/components/} : Composants réutilisables
+    \item \texttt{src/services/} : Services API et utilitaires
+    \item \texttt{src/types/} : Définitions TypeScript
+    \item \texttt{src/utils/} : Fonctions utilitaires
+\end{itemize}
+
+\subsubsection{Backend (dossier \texttt{server/})}
+\begin{itemize}
+    \item \texttt{controllers/} : Logique métier des endpoints
+    \item \texttt{models/} : Modèles de données Mongoose
+    \item \texttt{routes/} : Définition des routes API
+    \item \texttt{middleware/} : Middleware d'authentification et validation
+    \item \texttt{config/} : Configuration de l'application
+\end{itemize}
+
+\section{Implémentation du frontend}
+\subsection{Technologies utilisées}
+Le frontend utilise un stack moderne et performant :
+
+\begin{itemize}
+    \item \textbf{React 19} : Framework principal avec hooks et composants fonctionnels
+    \item \textbf{TypeScript} : Typage statique pour la robustesse du code
+    \item \textbf{Tailwind CSS} : Framework CSS utilitaire pour le design
+    \item \textbf{React Router} : Gestion de la navigation et du routage
+    \item \textbf{Axios} : Client HTTP pour les appels API
+    \textbf{React Hook Form} : Gestion des formulaires avec validation
+\end{itemize}
+
+\subsection{Architecture des composants}
+\subsubsection{Composants de base}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/composants-frontend.png}
+\caption{Architecture des composants frontend}
+\label{fig:composants-frontend}
+\end{figure}
+
+Les composants sont organisés selon une hiérarchie claire :
+\begin{itemize}
+    \item \textbf{Layout} : Structure générale de l'application
+    \item \textbf{Pages} : Pages principales avec logique métier
+    \item \textbf{Components} : Composants réutilisables
+    \item \textbf{Forms} : Formulaires spécialisés
+\end{itemize}
+
+\subsubsection{Gestion d'état}
+L'état de l'application est géré localement avec React Hooks :
+\begin{itemize}
+    \item \texttt{useState} : État local des composants
+    \item \texttt{useEffect} : Effets de bord et appels API
+    \item \texttt{useContext} : Partage d'état global (authentification)
+    \item \texttt{useCallback} : Optimisation des performances
+\end{itemize}
+
+\subsection{Pages principales implémentées}
+\subsubsection{Dashboard principal}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/dashboard-principal.png}
+\caption{Interface du dashboard principal}
+\label{fig:dashboard-principal}
+\end{figure}
+
+Le dashboard principal (\texttt{src/pages/Dashboard/Dashboard.tsx}) offre :
+\begin{itemize}
+    \item Vue d'ensemble des sites et secteurs
+    \item Statistiques en temps réel
+    \item Navigation rapide vers les fonctionnalités
+    \item Notifications et alertes
+\end{itemize}
+
+\subsubsection{Gestion des secteurs}
+La page de gestion des secteurs (\texttt{src/pages/Admin/SecteurPage.tsx}) permet :
+\begin{itemize}
+    \item Affichage de la liste des secteurs avec statistiques
+    \item Création de nouveaux secteurs
+    \item Modification des secteurs existants
+    \item Suppression logique (soft delete)
+    \item Consultation des employés par secteur
+\end{itemize}
+
+\subsubsection{Gestion des services}
+La page de gestion des services (\texttt{src/pages/Admin/ServicePage.tsx}) offre :
+\begin{itemize}
+    \item Gestion des services par secteur
+    \item Création et modification des services
+    \item Attribution des chefs de service
+    \item Configuration du personnel minimum
+\end{itemize}
+
+\subsubsection{Vues spécialisées}
+\begin{itemize}
+    \item \texttt{MonSecteur.tsx} : Vue du chef de secteur
+    \item \texttt{MesIngenieurs.tsx} : Gestion des ingénieurs
+    \item \texttt{MonEquipe.tsx} : Vue du chef de service
+\end{itemize}
+
+\section{Implémentation du backend}
+\subsection{Technologies utilisées}
+Le backend est construit avec des technologies robustes et éprouvées :
+
+\begin{itemize}
+    \item \textbf{Node.js} : Runtime JavaScript côté serveur
+    \item \textbf{Express} : Framework web pour l'API REST
+    \item \textbf{MongoDB} : Base de données NoSQL
+    \item \textbf{Mongoose} : ODM pour MongoDB
+    \item \textbf{JWT} : Authentification par tokens
+    \item \textbf{bcrypt} : Chiffrement des mots de passe
+\end{itemize}
+
+\subsection{Architecture de l'API}
+\subsubsection{Structure des routes}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{images/architecture-api.png}
+\caption{Architecture de l'API REST}
+\label{fig:architecture-api}
+\end{figure}
+
+L'API est organisée en modules logiques :
+\begin{itemize}
+    \item \texttt{/api/auth} : Authentification et gestion des utilisateurs
+    \item \texttt{/api/org} : Gestion organisationnelle (sites, secteurs, services)
+    \item \texttt{/api/users} : Gestion des utilisateurs avec filtres
+    \item \texttt{/api/astreintes} : Gestion des astreintes et plannings
+\end{itemize}
+
+\subsubsection{Middleware d'authentification}
+Le système d'authentification utilise JWT avec plusieurs niveaux de sécurité :
+
+\begin{lstlisting}[language=JavaScript, caption=Middleware d'authentification]
+const authenticateToken = async (req, res, next) => {
+  try {
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token d\'authentification requis' 
+      });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Token invalide ou expiré' 
+    });
+  }
+};
+\end{lstlisting}
+
+\subsection{Modèles de données}
+\subsubsection{Modèle utilisateur}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{images/schema-utilisateur.png}
+\caption{Schéma de données utilisateur}
+\label{fig:schema-utilisateur}
+\end{figure}
+
+Le modèle utilisateur (\texttt{server/models/User.js}) définit :
+\begin{itemize}
+    \item Informations d'identification (email, mot de passe)
+    \item Informations personnelles (nom, prénom, téléphone)
+    \item Rôle et permissions (admin, chef\_site, chef\_secteur, etc.)
+    \item Affectation organisationnelle (site, secteur, service)
+    \item Métadonnées (dates de création/modification)
+\end{itemize}
+
+\subsubsection{Modèle organisationnel}
+\begin{itemize}
+    \item \textbf{Site} : Unité géographique avec coordonnées
+    \item \textbf{Secteur} : Division fonctionnelle au sein d'un site
+    \item \textbf{Service} : Équipe opérationnelle au sein d'un secteur
+\end{itemize}
+
+\subsection{Contrôleurs et logique métier}
+\subsubsection{Contrôleur utilisateur}
+Le contrôleur utilisateur (\texttt{server/controllers/userController.js}) gère :
+
+\begin{lstlisting}[language=JavaScript, caption=Fonction de récupération des utilisateurs]
+const getUsers = async (req, res) => {
+  try {
+    const { secteur, service, role, limit = 50 } = req.query;
+    const filter = {};
+    
+    // Filtrage par secteur
+    if (secteur) filter.secteur = secteur;
+    
+    // Filtrage par service
+    if (service) filter.service = service;
+    
+    // Filtrage par rôle
+    if (role) filter.role = role;
+    
+    // Filtrage automatique selon le rôle de l'utilisateur connecté
+    const currentUser = req.user;
+    if (currentUser) {
+      if (currentUser.role === 'chef_secteur' && currentUser.secteur) {
+        filter.secteur = currentUser.secteur;
+        // Restriction des rôles visibles
+        if (!role) filter.role = { $in: ['ingenieur', 'collaborateur'] };
+      }
+    }
+    
+    const users = await User.find(filter).limit(parseInt(limit));
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+\end{lstlisting}
+
+\subsubsection{Contrôleur organisationnel}
+Le contrôleur organisationnel gère les sites, secteurs et services avec :
+\begin{itemize}
+    \item CRUD complet pour chaque entité
+    \item Validation des données avec Joi
+    \item Gestion des dépendances et contraintes
+    \item Statistiques et métriques
+\end{itemize}
+
+\section{Gestion de la sécurité}
+\subsection{Authentification et autorisation}
+\subsubsection{Système JWT}
+\begin{itemize}
+    \item Génération de tokens avec expiration (24h)
+    \item Refresh automatique des tokens
+    \item Stockage sécurisé dans les cookies HTTP-only
+    \item Invalidation des tokens lors de la déconnexion
+\end{itemize}
+
+\subsubsection{Gestion des permissions}
+Le système implémente un contrôle d'accès basé sur les rôles (RBAC) :
+\begin{itemize}
+    \item \textbf{Admin} : Accès complet au système
+    \item \textbf{Chef de site} : Gestion de son site uniquement
+    \item \textbf{Chef de secteur} : Gestion de son secteur uniquement
+    \item \textbf{Chef de service} : Gestion de son service uniquement
+    \item \textbf{Utilisateur} : Consultation limitée selon son affectation
+\end{itemize}
+
+\subsection{Sécurité des données}
+\subsubsection{Validation des entrées}
+\begin{itemize}
+    \item Validation côté serveur avec Joi
+    \item Sanitisation des données
+    \item Protection contre les injections
+    \item Validation des types et formats
+\end{itemize}
+
+\subsubsection{Protection contre les attaques}
+\begin{itemize}
+    \item Headers de sécurité avec Helmet
+    \item Protection CSRF
+    \item Rate limiting pour prévenir les attaques par force brute
+    \item Validation des tokens et sessions
+\end{itemize}
+
+\section{Base de données et persistance}
+\subsection{Configuration MongoDB}
+\begin{itemize}
+    \item \textbf{Atlas} : Base de données cloud pour la production
+    \item \textbf{Local} : Base de données locale pour le développement
+    \item \textbf{Indexation} : Index optimisés pour les requêtes fréquentes
+    \item \textbf{Backup} : Sauvegarde automatique quotidienne
+\end{itemize}
+
+\subsection{Modèles Mongoose}
+Les modèles Mongoose assurent :
+\begin{itemize}
+    \item Validation des schémas
+    \item Hooks et middleware
+    \item Relations entre entités
+    \item Indexation automatique
+\end{itemize}
+
+\section{Intégration et déploiement}
+\subsection{Configuration de l'environnement}
+\begin{itemize}
+    \item Variables d'environnement avec dotenv
+    \item Configuration différenciée dev/prod
+    \item Gestion des secrets et clés API
+    \item Configuration de la base de données
+\end{itemize}
+
+\subsection{Scripts de déploiement}
+\begin{itemize}
+    \item Scripts npm pour le build et le démarrage
+    \item Configuration PM2 pour la production
+    \item Scripts de migration de base de données
+    \item Procédures de rollback
+\end{itemize}
+
+\section{Tests et qualité du code}
+\subsection{Tests unitaires}
+\begin{itemize}
+    \item Tests des composants React avec Jest
+    \item Tests des contrôleurs backend
+    \item Tests des modèles de données
+    \item Couverture de code > 80\%
+\end{itemize}
+
+\subsection{Tests d'intégration}
+\begin{itemize}
+    \item Tests des endpoints API
+    \item Tests des flux d'authentification
+    \item Tests des scénarios métier
+    \item Tests de performance
+\end{itemize}
+
+\subsection{Qualité du code}
+\begin{itemize}
+    \item Linting avec ESLint
+    \item Formatage avec Prettier
+    \item Vérification des types TypeScript
+    \item Documentation du code
+\end{itemize}
+
+Cette phase d'implémentation a permis de transformer la conception en un système fonctionnel, robuste et sécurisé, respectant les bonnes pratiques de développement et les exigences métier d'OCP.

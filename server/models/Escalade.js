@@ -463,6 +463,86 @@ escaladeSchema.methods.resoudre = function(resoluteurId, commentaire, methodesRe
   return this.save();
 };
 
+// Add method to handle escalade according to cahier de charge
+escaladeSchema.methods.executerEscalade = async function() {
+  const Escalade = mongoose.model('Escalade');
+  const User = mongoose.model('User');
+  const Service = mongoose.model('Service');
+  
+  try {
+    // Niveau 1: Collaborateur/Chef de service du service contacté
+    if (this.niveau === 1) {
+      const service = await Service.findById(this.service).populate('chefService collaborateurs');
+      const personnel = [service.chefService, ...service.collaborateurs].filter(Boolean);
+      
+      // Essayer de contacter le personnel du service
+      for (const personne of personnel) {
+        const reponse = await this.tenterContact(personne);
+        if (reponse) {
+          this.statut = 'resolu';
+          this.resoluPar = personne._id;
+          this.resoluLe = new Date();
+          await this.save();
+          return { niveau: 1, resolu: true, personne };
+        }
+      }
+      
+      // Si aucun ne répond, passer au niveau 2
+      this.niveau = 2;
+      await this.save();
+      return await this.executerEscalade();
+    }
+    
+    // Niveau 2: Ingénieur de garde du secteur
+    if (this.niveau === 2) {
+      const ingenieurs = await User.find({ 
+        secteur: this.secteur, 
+        role: 'ingenieur', 
+        isActive: true 
+      });
+      
+      for (const ingenieur of ingenieurs) {
+        const reponse = await this.tenterContact(ingenieur);
+        if (reponse) {
+          this.statut = 'resolu';
+          this.resoluPar = ingenieur._id;
+          this.resoluLe = new Date();
+          await this.save();
+          return { niveau: 2, resolu: true, personne: ingenieur };
+        }
+      }
+      
+      // Si aucun ingénieur ne répond, passer au niveau 3
+      this.niveau = 3;
+      await this.save();
+      return await this.executerEscalade();
+    }
+    
+    // Niveau 3: Chef de secteur alerté
+    if (this.niveau === 3) {
+      const chefSecteur = await User.findOne({ 
+        secteur: this.secteur, 
+        role: 'chef_secteur', 
+        isActive: true 
+      });
+      
+      if (chefSecteur) {
+        await this.tenterContact(chefSecteur);
+        this.statut = 'escalade_maximale';
+        this.escaladeMaximaleLe = new Date();
+        await this.save();
+        return { niveau: 3, resolu: false, personne: chefSecteur };
+      }
+    }
+    
+    return { niveau: this.niveau, resolu: false, personne: null };
+    
+  } catch (error) {
+    console.error('Erreur escalade:', error);
+    throw error;
+  }
+};
+
 // Méthode statique pour obtenir les escalades actives
 escaladeSchema.statics.getEscaladesActives = function(siteId = null) {
   const query = { statut: 'en_cours' };

@@ -20,6 +20,7 @@ import authJwtRoutes from './routes/auth-jwt.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import indisponibiliteRoutes from './routes/indisponibilites.js';
+import panneRoutes from './routes/pannes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -175,7 +176,7 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         role: user.role
       },
-      process.env.JWT_SECRET || 'ocp_secret_key_2024',
+      process.env.JWT_SECRET || 'ocp_astreinte_secret_key_2024',
       { expiresIn: '24h' }
     );
 
@@ -230,7 +231,7 @@ app.get('/api/auth/me', async (req, res) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ocp_secret_key_2024');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ocp_astreinte_secret_key_2024');
 
     // Get user from database
     const user = await User.findById(decoded.id).populate('site');
@@ -849,6 +850,13 @@ app.use('/api/users', userRoutes);
 
 // Unavailabilities
 app.use('/api/unavailability', indisponibiliteRoutes);
+
+// Planning routes
+import planningRoutes from './routes/plannings.js';
+app.use('/api/plannings', planningRoutes);
+
+// Pannes routes
+app.use('/api/pannes', panneRoutes);
 
 // Middleware 404
 app.use('*', (req, res) => {

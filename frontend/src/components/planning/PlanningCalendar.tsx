@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import ContactInfo from './ContactInfo';
 import holidaysService from '@/services/holidays.service';
 import type { Holiday } from '@/services/holidays.service';
+import type { UserRole } from '@/types';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -10,7 +12,9 @@ import {
   UserIcon,
   BuildingOfficeIcon,
   WrenchScrewdriverIcon,
-  MapIcon
+  MapIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 interface PlanningFilters {
@@ -30,6 +34,9 @@ interface GuardAssignment {
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
+    address?: string;
+    role: UserRole;
   };
   site: {
     id: string;
@@ -44,21 +51,35 @@ interface GuardAssignment {
     name: string;
   };
   shift: 'day' | 'night' | 'weekend';
+  hasPanne?: boolean;
+  panneDetails?: {
+    type: string;
+    description: string;
+    urgence: string;
+  };
 }
 
 interface PlanningCalendarProps {
   filters: PlanningFilters;
   onFiltersChange: (filters: PlanningFilters) => void;
+  selectedServiceId?: string;
+  showOnlyWithPanne?: boolean;
 }
 
-const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersChange }) => {
+const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ 
+  filters, 
+  onFiltersChange, 
+  selectedServiceId,
+  showOnlyWithPanne = false 
+}) => {
   const [assignments, setAssignments] = useState<GuardAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedAssignment, setSelectedAssignment] = useState<GuardAssignment | null>(null);
 
   useEffect(() => {
     loadPlanningData();
-  }, [filters]);
+  }, [filters, selectedServiceId, showOnlyWithPanne]);
 
   const loadPlanningData = async () => {
     setIsLoading(true);
@@ -96,7 +117,10 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
               id: `ing-${index}`,
               firstName: isEvenWeekend ? 'Ahmed' : 'Mohamed',
               lastName: isEvenWeekend ? 'Benali' : 'Tazi',
-              email: isEvenWeekend ? 'a.benali@ocp.ma' : 'm.tazi@ocp.ma'
+              email: isEvenWeekend ? 'a.benali@ocp.ma' : 'm.tazi@ocp.ma',
+              phone: isEvenWeekend ? '+212 6 12 34 56 78' : '+212 6 87 65 43 21',
+              address: isEvenWeekend ? '123 Rue Hassan II, Khouribga' : '456 Avenue Mohammed V, Safi',
+              role: 'ingenieur' as UserRole
             },
             site: {
               id: isEvenWeekend ? '1' : '2',
@@ -110,7 +134,13 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
               id: isEvenWeekend ? '1' : '7',
               name: isEvenWeekend ? 'Extraction' : 'Réacteurs'
             },
-            shift: 'weekend'
+            shift: 'weekend',
+            hasPanne: !isEvenWeekend && index < 2, // Réacteurs a une panne
+            panneDetails: !isEvenWeekend && index < 2 ? {
+              type: 'technique',
+              description: 'Panne système de refroidissement',
+              urgence: 'haute'
+            } : undefined
           });
 
           mockAssignments.push({
@@ -121,7 +151,10 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
               id: `collab-${index}`,
               firstName: isEvenWeekend ? 'Fatima' : 'Rachid',
               lastName: isEvenWeekend ? 'Alami' : 'Amrani',
-              email: isEvenWeekend ? 'f.alami@ocp.ma' : 'r.amrani@ocp.ma'
+              email: isEvenWeekend ? 'f.alami@ocp.ma' : 'r.amrani@ocp.ma',
+              phone: isEvenWeekend ? '+212 6 11 22 33 44' : '+212 6 55 66 77 88',
+              address: isEvenWeekend ? '789 Boulevard Zerktouni, Khouribga' : '321 Rue Ibn Sina, Safi',
+              role: 'collaborateur' as UserRole
             },
             site: {
               id: isEvenWeekend ? '1' : '2',
@@ -148,7 +181,10 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
               id: `ing-dim-${index}`,
               firstName: isEvenWeekend ? 'Youssef' : 'Hassan',
               lastName: isEvenWeekend ? 'Bennani' : 'Lahlou',
-              email: isEvenWeekend ? 'y.bennani@ocp.ma' : 'h.lahlou@ocp.ma'
+              email: isEvenWeekend ? 'y.bennani@ocp.ma' : 'h.lahlou@ocp.ma',
+              phone: isEvenWeekend ? '+212 6 99 88 77 66' : '+212 6 44 33 22 11',
+              address: isEvenWeekend ? '147 Avenue des FAR, El Jadida' : '258 Rue Al Massira, Benguerir',
+              role: 'ingenieur' as UserRole
             },
             site: {
               id: isEvenWeekend ? '3' : '4',
@@ -173,7 +209,10 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
               id: `collab-dim-${index}`,
               firstName: isEvenWeekend ? 'Aicha' : 'Khadija',
               lastName: isEvenWeekend ? 'Idrissi' : 'Berrada',
-              email: isEvenWeekend ? 'a.idrissi@ocp.ma' : 'k.berrada@ocp.ma'
+              email: isEvenWeekend ? 'a.idrissi@ocp.ma' : 'k.berrada@ocp.ma',
+              phone: isEvenWeekend ? '+212 6 77 88 99 00' : '+212 6 33 44 55 66',
+              address: isEvenWeekend ? '369 Quartier Industriel, Khouribga' : '741 Centre Ville, Youssoufia',
+              role: 'collaborateur' as UserRole
             },
             site: {
               id: isEvenWeekend ? '1' : '5',
@@ -207,6 +246,16 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
         filteredAssignments = filteredAssignments.filter(a => a.service.id === filters.serviceId);
       }
 
+      // Filtrer par service sélectionné
+      if (selectedServiceId) {
+        filteredAssignments = filteredAssignments.filter(a => a.service.id === selectedServiceId);
+      }
+
+      // Filtrer par pannes
+      if (showOnlyWithPanne) {
+        filteredAssignments = filteredAssignments.filter(a => a.hasPanne);
+      }
+
       setAssignments(filteredAssignments);
     } catch (error) {
       console.error('Erreur chargement planning:', error);
@@ -215,17 +264,30 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
     }
   };
 
-  const getWeekDays = (date: Date) => {
-    const week = [];
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay() + 1); // Lundi
-
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek);
-      day.setDate(startOfWeek.getDate() + i);
-      week.push(day);
+  const getMonthDays = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    // Premier jour du mois
+    const firstDay = new Date(year, month, 1);
+    // Dernier jour du mois
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Premier lundi de la grille (peut être du mois précédent)
+    const startDate = new Date(firstDay);
+    const dayOfWeek = firstDay.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Lundi = 0
+    startDate.setDate(firstDay.getDate() - daysToSubtract);
+    
+    // Générer 42 jours (6 semaines)
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const day = new Date(startDate);
+      day.setDate(startDate.getDate() + i);
+      days.push(day);
     }
-    return week;
+    
+    return days;
   };
 
   const formatDate = (date: Date) => {
@@ -237,14 +299,20 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
     return assignments.filter(a => a.date === dateStr);
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentWeek);
-    newDate.setDate(currentWeek.getDate() + (direction === 'next' ? 7 : -7));
-    setCurrentWeek(newDate);
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(currentMonth.getMonth() + (direction === 'next' ? 1 : -1));
+    setCurrentMonth(newDate);
   };
 
-  const weekDays = getWeekDays(currentWeek);
-  const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const monthDays = getMonthDays(currentMonth);
+  const dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+  const shortDayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+  const currentMonthName = currentMonth.toLocaleDateString('fr-FR', { 
+    month: 'long', 
+    year: 'numeric' 
+  });
 
   if (isLoading) {
     return (
@@ -272,20 +340,19 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigateWeek('prev')}
+              onClick={() => navigateMonth('prev')}
             >
               <ChevronLeftIcon className="h-4 w-4" />
             </Button>
             
-            <span className="text-sm font-medium text-gray-700 px-3">
-              {weekDays[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - {' '}
-              {weekDays[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+            <span className="text-lg font-medium text-gray-700 px-4 capitalize">
+              {currentMonthName}
             </span>
             
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigateWeek('next')}
+              onClick={() => navigateMonth('next')}
             >
               <ChevronRightIcon className="h-4 w-4" />
             </Button>
@@ -296,43 +363,53 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
       <Card.Body>
         <div className="grid grid-cols-7 gap-1">
           {/* En-têtes des jours */}
-          {dayNames.map((day, index) => (
-            <div key={day} className="p-2 text-center text-sm font-medium text-gray-500 border-b">
+          {shortDayNames.map((day, index) => (
+            <div key={day} className="p-3 text-center text-sm font-medium text-gray-500 border-b bg-gray-50">
               {day}
             </div>
           ))}
           
-          {/* Jours de la semaine */}
-          {weekDays.map((date, index) => {
+          {/* Jours du mois */}
+          {monthDays.map((date, index) => {
             const dayAssignments = getAssignmentsForDate(date);
             const isToday = formatDate(date) === formatDate(new Date());
+            const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
             const isWeekend = date.getDay() === 0 || date.getDay() === 6; // Dimanche ou Samedi
             const hasAstreinte = dayAssignments.length > 0;
+            const hasPanne = dayAssignments.some(a => a.hasPanne);
             const holiday = holidaysService.isHoliday(date);
 
             return (
               <div
                 key={index}
-                className={`min-h-32 p-2 border-r border-b ${
-                  isToday ? 'bg-ocp-primary/10' :
+                className={`min-h-32 p-2 border-r border-b relative ${
+                  !isCurrentMonth ? 'bg-gray-100 text-gray-400' :
+                  isToday ? 'bg-ocp-primary/10 ring-2 ring-ocp-primary' :
                   holiday ? 'bg-red-50' :
                   isWeekend ? (hasAstreinte ? 'bg-orange-50' : 'bg-gray-50') :
                   'bg-white'
-                }`}
+                } ${hasPanne ? 'ring-2 ring-red-400' : ''}`}
               >
+                {hasPanne && (
+                  <div className="absolute top-1 right-1">
+                    <ExclamationTriangleIcon className="h-4 w-4 text-red-600" />
+                  </div>
+                )}
+                
                 <div className={`text-sm font-medium mb-2 ${
+                  !isCurrentMonth ? 'text-gray-400' :
                   isToday ? 'text-ocp-primary font-bold' :
                   holiday ? 'text-red-600 font-medium' :
                   isWeekend ? 'text-orange-600 font-medium' :
                   'text-gray-900'
                 }`}>
                   {date.getDate()}
-                  {holiday && (
+                  {holiday && isCurrentMonth && (
                     <div className="text-xs text-red-500 mt-1 font-medium">
-                      🇲🇦 {holiday.name}
+                      🇲🇦 {holiday.name.length > 15 ? holiday.name.substring(0, 15) + '...' : holiday.name}
                     </div>
                   )}
-                  {isWeekend && !hasAstreinte && !holiday && (
+                  {isWeekend && !hasAstreinte && !holiday && isCurrentMonth && (
                     <div className="text-xs text-gray-400 mt-1">Pas d'astreinte</div>
                   )}
                 </div>
@@ -341,18 +418,33 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
                   {dayAssignments.map((assignment) => (
                     <div
                       key={assignment.id}
-                      className={`text-xs p-1 rounded ${
+                      onClick={() => setSelectedAssignment(assignment)}
+                      className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${
                         assignment.type === 'ingenieur'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                          : 'bg-green-100 text-green-800 border border-green-200'
+                      } ${assignment.hasPanne ? 'ring-1 ring-red-400' : ''}`}
                     >
+                      {assignment.hasPanne && (
+                        <div className="flex items-center mb-1">
+                          <span className="text-red-600 text-xs font-bold">🚨</span>
+                        </div>
+                      )}
+                      
                       <div className="font-medium">
                         {assignment.user.firstName} {assignment.user.lastName}
                       </div>
+                      
+                      {assignment.user.phone && (
+                        <div className="text-xs opacity-75 flex items-center">
+                          📞 {assignment.user.phone}
+                        </div>
+                      )}
+                      
                       <div className="text-xs opacity-75">
                         {assignment.secteur.name} - {assignment.service.name}
                       </div>
+                      
                       <div className="text-xs opacity-75">
                         {assignment.shift === 'day' ? '🌅 Jour' : 
                          assignment.shift === 'night' ? '🌙 Nuit' : '🏖️ Weekend'}
@@ -365,6 +457,50 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ filters, onFiltersC
           })}
         </div>
       </Card.Body>
+      
+      {/* Modal de détails du contact */}
+      {selectedAssignment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">
+                Détails du personnel de garde
+              </h3>
+              <button
+                onClick={() => setSelectedAssignment(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <ContactInfo
+                user={selectedAssignment.user}
+                site={selectedAssignment.site}
+                secteur={selectedAssignment.secteur}
+                service={selectedAssignment.service}
+                type={selectedAssignment.type}
+                shift={selectedAssignment.shift}
+                hasPanne={selectedAssignment.hasPanne}
+                panneDetails={selectedAssignment.panneDetails}
+                compact={false}
+              />
+              
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  <div><strong>Date de garde:</strong> {new Date(selectedAssignment.date).toLocaleDateString('fr-FR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

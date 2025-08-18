@@ -323,6 +323,92 @@ planningSchema.methods.detecterConflits = async function() {
   return conflits;
 };
 
+// Méthode pour vérifier les règles de double planning selon le cahier de charge
+planningSchema.methods.verifierReglesDoublePlanning = async function() {
+  const conflits = [];
+  
+  // Vérifier les conflits entre planning service et planning secteur
+  if (this.type === 'service') {
+    // Chercher les plannings secteur qui se chevauchent
+    const planningsSecteur = await this.constructor.find({
+      type: 'secteur',
+      secteur: this.secteur,
+      statut: { $in: ['valide', 'publie'] },
+      'periode.debut': { $lte: this.periode.fin },
+      'periode.fin': { $gte: this.periode.debut }
+    });
+    
+    for (const planningSecteur of planningsSecteur) {
+      for (const gardeService of this.gardes) {
+        const gardeSecteur = planningSecteur.gardes.find(g => 
+          g.date.toDateString() === gardeService.date.toDateString() &&
+          g.utilisateur.toString() === gardeService.utilisateur.toString()
+        );
+        
+        if (gardeSecteur) {
+          conflits.push({
+            type: 'double_planning_service_secteur',
+            date: gardeService.date,
+            utilisateur: gardeService.utilisateur,
+            planningService: this._id,
+            planningSecteur: planningSecteur._id,
+            message: 'Un utilisateur ne peut pas être en garde service et secteur le même jour'
+          });
+        }
+      }
+    }
+  }
+  
+  return conflits;
+};
+
+// Méthode pour résoudre automatiquement les conflits de double planning
+planningSchema.methods.resoudreConflits = async function() {
+  const conflits = await this.verifierReglesDoublePlanning();
+  
+  if (conflits.length === 0) {
+    return { resolu: true, message: 'Aucun conflit à résoudre' };
+  }
+
+  let conflitsResolus = 0;
+  const actions = [];
+
+  for (const conflit of conflits) {
+    if (conflit.type === 'double_planning_service_secteur') {
+      // Résoudre en supprimant la garde service (priorité au secteur)
+      const gardeIndex = this.gardes.findIndex(g => 
+        g.date.toDateString() === conflit.date.toDateString() &&
+        g.utilisateur.toString() === conflit.utilisateur.toString()
+      );
+      
+      if (gardeIndex !== -1) {
+        this.gardes.splice(gardeIndex, 1);
+        conflitsResolus++;
+        actions.push({
+          type: 'suppression_garde_service',
+          date: conflit.date,
+          utilisateur: conflit.utilisateur,
+          raison: 'Conflit avec garde secteur - priorité secteur'
+        });
+      }
+    }
+  }
+
+  if (conflitsResolus > 0) {
+    await this.save();
+  }
+
+  return {
+    resolu: conflitsResolus === conflits.length,
+    conflitsResolus,
+    totalConflits: conflits.length,
+    actions,
+    message: conflitsResolus === conflits.length ? 
+      'Tous les conflits ont été résolus' : 
+      `${conflitsResolus}/${conflits.length} conflits résolus`
+  };
+};
+
 // Méthode statique pour obtenir les plannings par période
 planningSchema.statics.getByPeriode = function(siteId, dateDebut, dateFin) {
   return this.find({

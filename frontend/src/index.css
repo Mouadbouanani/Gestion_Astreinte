@@ -5,6 +5,15 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* OCP Theme Variables */
+    --ocp-primary: #3b82f6;
+    --ocp-accent: #0ea5e9;
+    --ocp-success: #22c55e;
+    --ocp-warning: #f59e0b;
+    --ocp-error: #ef4444;
+  }
+
   * {
     @apply border-gray-200;
   }
@@ -16,6 +25,10 @@
 
   html {
     scroll-behavior: smooth;
+  }
+
+  #root {
+    margin: auto;
   }
 }
 
@@ -142,6 +155,80 @@
 
   .planning-header {
     @apply p-2 text-center text-sm font-medium text-gray-500 border-b;
+  }
+
+  /* Styles pour les contacts */
+  .contact-info-compact {
+    @apply text-xs p-2 rounded-lg border;
+  }
+
+  .contact-info-compact.ingenieur {
+    @apply bg-blue-50 border-blue-200 text-blue-900;
+  }
+
+  .contact-info-compact.collaborateur {
+    @apply bg-green-50 border-green-200 text-green-900;
+  }
+
+  .contact-info-compact.panne {
+    @apply ring-2 ring-red-400;
+  }
+
+  /* Styles pour les services avec pannes */
+  .service-with-panne {
+    @apply border-red-300 bg-red-50;
+  }
+
+  .panne-indicator {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .panne-indicator.critique {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .panne-indicator.haute {
+    @apply bg-orange-100 text-orange-800;
+  }
+
+  .panne-indicator.moyenne {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .panne-indicator.basse {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  /* Animations pour les alertes */
+  .alert-pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Styles pour les numéros de téléphone */
+  .phone-link {
+    @apply text-ocp-primary hover:underline font-medium;
+  }
+
+  /* Styles pour les adresses */
+  .address-text {
+    @apply text-sm text-gray-600 line-clamp-2;
+  }
+
+  /* Utilitaire pour limiter les lignes de texte */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Styles pour les liens de navigation */
