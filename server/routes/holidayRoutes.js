@@ -65,7 +65,7 @@ const updateHolidayValidation = [
  * @desc    Get all holidays with optional filtering
  * @access  Private (any authenticated user)
  */
-router.get('/', authenticateToken, getAllHolidays);
+// router.get('/', authenticateToken, getAllHolidays);
 
 /**
  * @route   GET /api/holidays/year/:year
