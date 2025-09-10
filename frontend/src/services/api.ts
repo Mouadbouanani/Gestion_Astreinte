@@ -16,7 +16,6 @@ import type {
   CreateUserForm,
   UpdateUserForm
 } from '@/types';
-import {id} from "zod/v4/locales";
 
 // Configuration de base d'Axios
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
@@ -27,7 +26,7 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 35000,
+      timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -547,6 +546,11 @@ class ApiService {
 
   // Expose configured Axios instance safely for service modules
   public get client(): AxiosInstance {
+    return this.api;
+  }
+
+  // Expose api property for service modules that need direct access
+  public get apiClient(): AxiosInstance {
     return this.api;
   }
 }

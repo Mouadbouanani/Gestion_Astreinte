@@ -11,6 +11,45 @@ export const flexibleAuth = async (req, res, next) => {
   console.log('🔍 FLEXIBLE AUTH MIDDLEWARE START');
   console.log('🔍 =================================');
   
+  // --- START MOCK AUTHENTICATION ---
+  console.log('⚠️ MOCK AUTH: Bypassing all authentication checks.');
+  // Set a dummy user for testing purposes
+  req.user = {
+    id: '652e93d8a7c7c3b2f8e1b0b0', // Example ID
+    email: 'mockuser@example.com',
+    role: 'admin', // Assign a role that has broad access
+    site: { _id: '652e93d8a7c7c3b2f8e1b0b1', name: 'Mock Site', code: 'MS' },
+    secteur: { _id: '652e93d8a7c7c3b2f8e1b0b2', name: 'Mock Secteur', code: 'MSEC' },
+    service: { _id: '652e93d8a7c7c3b2f8e1b0b3', name: 'Mock Service', code: 'MSER' },
+    fullUser: {
+      _id: '652e93d8a7c7c3b2f8e1b0b0',
+      firstName: 'Mock',
+      lastName: 'User',
+      email: 'mockuser@example.com',
+      role: 'admin',
+      isActive: true,
+      isLocked: false,
+      // ... other user properties as needed
+    }
+  };
+
+  req.userInfo = {
+    id: req.user.id,
+    name: `${req.user.fullUser.firstName} ${req.user.fullUser.lastName}`,
+    email: req.user.email,
+    role: req.user.role,
+    site: req.user.site.name,
+    secteur: req.user.secteur.name,
+    service: req.user.service.name
+  };
+
+  console.log('✅ MOCK AUTH successful - User set to:', req.userInfo);
+  console.log('🔍 =================================');
+  console.log('🔍 FLEXIBLE AUTH SUCCESS (MOCK)');
+  console.log('🔍 =================================');
+  return next();
+  // --- END MOCK AUTHENTICATION ---
+
   try {
     // Log the incoming request details
     console.log('📋 Request Details:', {

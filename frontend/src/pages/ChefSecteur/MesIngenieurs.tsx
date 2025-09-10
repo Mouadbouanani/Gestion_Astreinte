@@ -39,19 +39,19 @@ const MesIngenieurs: React.FC = () => {
   const [showGardeModal, setShowGardeModal] = useState(false);
 
   useEffect(() => {
-    if (user?.role === 'chef_secteur' && user.secteur?._id) {
+    if (user?.role === 'chef_secteur' && typeof user.secteur === 'object' && user.secteur?._id) {
       loadData();
     } else if (user?.role === 'chef_secteur' && !user.secteur) {
       setIsLoading(false);
     }
-  }, [user?.role, user?.secteur?._id, selectedMonth]);
+  }, [ user?.role,typeof user?.secteur ==='object'&& user?.secteur?._id, selectedMonth]);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
 
       // Load engineers in this secteur
-      if (user?.secteur?._id) {
+      if (typeof user?.secteur ==='object'&& user?.secteur?._id) {
         try {
           const ingenieurResponse = await apiService.getUsersBySecteur(user.secteur._id, 'ingenieur');
           setIngenieurs(ingenieurResponse.data || []);

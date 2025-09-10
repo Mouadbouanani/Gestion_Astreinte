@@ -4,7 +4,7 @@ import type {
   Escalade, 
   CreateEscaladeForm, 
   EscaladeFilters,
-  EscaladeNiveau,
+  // EscaladeNiveau,
   ApiResponse,
   User
 } from '@/types';
@@ -47,7 +47,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
   // CRUD Operations
   async create(data: CreateEscaladeForm): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.post<ApiResponse<Escalade>>('/escalades', data);
+      const response = await apiService.apiClient.post<ApiResponse<Escalade>>('/escalades', data);
       return response.data;
     } catch (error: any) {
       return {
@@ -69,7 +69,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
         });
       }
       
-      const response = await apiService.api.get<ApiResponse<Escalade[]>>(`/escalades?${params.toString()}`);
+      const response = await apiService.apiClient.get<ApiResponse<Escalade[]>>(`/escalades?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -82,7 +82,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async getById(id: string): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.get<ApiResponse<Escalade>>(`/escalades/${id}`);
+      const response = await apiService.apiClient.get<ApiResponse<Escalade>>(`/escalades/${id}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -95,7 +95,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async update(id: string, data: Partial<Escalade>): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.put<ApiResponse<Escalade>>(`/escalades/${id}`, data);
+      const response = await apiService.apiClient.put<ApiResponse<Escalade>>(`/escalades/${id}`, data);
       return response.data;
     } catch (error: any) {
       return {
@@ -108,7 +108,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async delete(id: string): Promise<ApiResponse<void>> {
     try {
-      const response = await apiService.api.delete<ApiResponse<void>>(`/escalades/${id}`);
+      const response = await apiService.apiClient.delete<ApiResponse<void>>(`/escalades/${id}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -122,7 +122,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
   // Escalation Workflow
   async startEscalation(id: string): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.post<ApiResponse<Escalade>>(`/escalades/${id}/start`);
+      const response = await apiService.apiClient.post<ApiResponse<Escalade>>(`/escalades/${id}/start`);
       return response.data;
     } catch (error: any) {
       return {
@@ -135,7 +135,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async escalateToNextLevel(id: string): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.post<ApiResponse<Escalade>>(`/escalades/${id}/escalate`);
+      const response = await apiService.apiClient.post<ApiResponse<Escalade>>(`/escalades/${id}/escalate`);
       return response.data;
     } catch (error: any) {
       return {
@@ -148,7 +148,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async respondToEscalation(id: string, niveau: number, commentaire?: string): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.post<ApiResponse<Escalade>>(`/escalades/${id}/respond`, {
+      const response = await apiService.apiClient.post<ApiResponse<Escalade>>(`/escalades/${id}/respond`, {
         niveau,
         commentaire
       });
@@ -164,7 +164,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async resolveEscalation(id: string, resolution: any): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.post<ApiResponse<Escalade>>(`/escalades/${id}/resolve`, resolution);
+      const response = await apiService.apiClient.post<ApiResponse<Escalade>>(`/escalades/${id}/resolve`, resolution);
       return response.data;
     } catch (error: any) {
       return {
@@ -177,7 +177,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async cancelEscalation(id: string, reason?: string): Promise<ApiResponse<Escalade>> {
     try {
-      const response = await apiService.api.post<ApiResponse<Escalade>>(`/escalades/${id}/cancel`, { reason });
+      const response = await apiService.apiClient.post<ApiResponse<Escalade>>(`/escalades/${id}/cancel`, { reason });
       return response.data;
     } catch (error: any) {
       return {
@@ -191,7 +191,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
   // Contact Methods
   async sendSMS(id: string, niveau: number, message: string): Promise<ApiResponse<any>> {
     try {
-      const response = await apiService.api.post<ApiResponse<any>>(`/escalades/${id}/contact/sms`, {
+      const response = await apiService.apiClient.post<ApiResponse<any>>(`/escalades/${id}/contact/sms`, {
         niveau,
         message
       });
@@ -207,7 +207,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async makeCall(id: string, niveau: number): Promise<ApiResponse<any>> {
     try {
-      const response = await apiService.api.post<ApiResponse<any>>(`/escalades/${id}/contact/call`, {
+      const response = await apiService.apiClient.post<ApiResponse<any>>(`/escalades/${id}/contact/call`, {
         niveau
       });
       return response.data;
@@ -222,7 +222,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async sendEmail(id: string, niveau: number, subject: string, body: string): Promise<ApiResponse<any>> {
     try {
-      const response = await apiService.api.post<ApiResponse<any>>(`/escalades/${id}/contact/email`, {
+      const response = await apiService.apiClient.post<ApiResponse<any>>(`/escalades/${id}/contact/email`, {
         niveau,
         subject,
         body
@@ -239,7 +239,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async sendPushNotification(id: string, niveau: number, message: string): Promise<ApiResponse<any>> {
     try {
-      const response = await apiService.api.post<ApiResponse<any>>(`/escalades/${id}/contact/push`, {
+      const response = await apiService.apiClient.post<ApiResponse<any>>(`/escalades/${id}/contact/push`, {
         niveau,
         message
       });
@@ -262,7 +262,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
         ...(serviceId && { serviceId })
       });
       
-      const response = await apiService.api.get<ApiResponse<User[]>>(`/escalades/on-duty?${params.toString()}`);
+      const response = await apiService.apiClient.get<ApiResponse<User[]>>(`/escalades/on-duty?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -281,7 +281,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
         ...(serviceId && { serviceId })
       });
       
-      const response = await apiService.api.get<ApiResponse<User[]>>(`/escalades/chain?${params.toString()}`);
+      const response = await apiService.apiClient.get<ApiResponse<User[]>>(`/escalades/chain?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -294,18 +294,18 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   calculateResponseTime(escalade: Escalade, niveau: number): number {
     const niveauData = escalade.niveaux.find(n => n.niveau === niveau);
-    if (!niveauData || !niveauData.dateReponse) {
+    if (!niveauData || !niveauData.endTime) {
       return 0;
     }
 
-    const contactTime = new Date(niveauData.dateContact).getTime();
-    const responseTime = new Date(niveauData.dateReponse).getTime();
+    const contactTime = new Date(niveauData.startTime).getTime();
+    const responseTime = new Date(niveauData.endTime).getTime();
     
     return Math.round((responseTime - contactTime) / (1000 * 60)); // en minutes
   }
 
   async getActiveEscalations(): Promise<ApiResponse<Escalade[]>> {
-    return this.getAll({ statut: 'en_cours' });
+    return this.getAll({ status: 'in_progress' });
   }
 
   // Statistics and Reports
@@ -320,7 +320,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
         });
       }
       
-      const response = await apiService.api.get<ApiResponse<any>>(`/escalades/stats?${params.toString()}`);
+      const response = await apiService.apiClient.get<ApiResponse<any>>(`/escalades/stats?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -342,7 +342,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
         });
       }
       
-      const response = await apiService.api.get<ApiResponse<any>>(`/escalades/response-time-stats?${params.toString()}`);
+      const response = await apiService.apiClient.get<ApiResponse<any>>(`/escalades/response-time-stats?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -355,7 +355,7 @@ export class EscalationServiceImpl implements EscalationServiceInterface {
 
   async getEscalationTrends(period: 'day' | 'week' | 'month'): Promise<ApiResponse<any>> {
     try {
-      const response = await apiService.api.get<ApiResponse<any>>(`/escalades/trends?period=${period}`);
+      const response = await apiService.apiClient.get<ApiResponse<any>>(`/escalades/trends?period=${period}`);
       return response.data;
     } catch (error: any) {
       return {

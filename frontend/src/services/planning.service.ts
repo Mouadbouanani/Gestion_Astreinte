@@ -1,6 +1,6 @@
 // Service de planning spécialisé
 import apiService from './api';
-import type { UserRole } from '@/types';
+// import type { UserRole } from '@/types';
 
 export interface PlanningEntry {
   _id?: string;

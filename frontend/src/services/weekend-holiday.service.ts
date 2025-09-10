@@ -1,5 +1,5 @@
 import holidaysService from './holidays.service';
-import api from './api';
+import { apiService } from './api';
 
 // Types
 export interface WeekendHolidayPlanning {
@@ -43,7 +43,7 @@ class WeekendHolidayService {
   ): Promise<WeekendHolidayPlanning[]> {
     try {
       // Appel backend: récupérer plannings validés/publiés sur la période
-      const response = await api.get('/plannings', {
+      const response = await apiService.apiClient.get('/plannings', {
         params: {
           start: startDate.toISOString().split('T')[0],
           end: endDate.toISOString().split('T')[0],
@@ -114,7 +114,7 @@ class WeekendHolidayService {
   /**
    * Récupère les statistiques des weekends et jours fériés
    */
-  async getWeekendHolidayStats(secteurId?: string): Promise<WeekendHolidayStats | null> {
+  async getWeekendHolidayStats(_secteurId?: string): Promise<WeekendHolidayStats | null> {
     try {
       // Données de test temporaires
       const testStats: WeekendHolidayStats = {

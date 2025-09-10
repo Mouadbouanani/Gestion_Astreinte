@@ -34,6 +34,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
+      // Allow public access to dashboard without authentication
+      console.log('🔓 Initializing auth - allowing public access');
+      
       if (apiService.isAuthenticated()) {
         const storedUser = apiService.getCurrentUserFromStorage();
         if (storedUser) {
@@ -41,9 +44,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Vérifier que le token est toujours valide en arrière-plan
           // Ne pas bloquer l'interface si ça échoue
           try {
-            await refreshUser();
+            // Set a timeout for the refresh to avoid blocking the UI
+            const refreshPromise = refreshUser();
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 5000)
+            );
+            await Promise.race([refreshPromise, timeoutPromise]);
           } catch (error) {
-            console.warn('Token expiré, utilisateur déconnecté silencieusement');
+            console.warn('Token expiré ou serveur indisponible, utilisateur déconnecté silencieusement');
             apiService.logout();
             setUser(null);
           }

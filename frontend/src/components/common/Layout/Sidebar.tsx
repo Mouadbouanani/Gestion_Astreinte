@@ -13,7 +13,7 @@ import {
   MapIcon,
   WrenchScrewdriverIcon,
   Bars3Icon,
-  XMarkIcon,
+  // XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -27,7 +27,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ 
   isOpen: controlledIsOpen, 
   onToggle, 
-  variant = 'desktop' 
+  // variant = 'desktop' 
 }) => {
   const { user } = useAuth();
   const location = useLocation();
@@ -350,7 +350,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 bg-ocp-primary rounded-full flex items-center justify-center">
                 <span className="text-white font-medium text-sm">
-                  {user.firstName[0]}{user.lastName[0]}
+                  {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
@@ -364,13 +364,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* Informations de périmètre */}
             <div className="mt-3 text-xs text-gray-500 space-y-1">
               {user.site && (
-                <div>📍 {user.site.name}</div>
+                <div>📍 {typeof user.site === 'object' ? user.site.name : user.site}</div>
               )}
               {user.secteur && (
-                <div>🏢 {user.secteur.name}</div>
+                <div>🏢 {typeof user.secteur === 'object' ? user.secteur.name : user.secteur}</div>
               )}
               {user.service && (
-                <div>⚙️ {user.service.name}</div>
+                <div>⚙️ {typeof user.service === 'object' ? user.service.name : user.service}</div>
               )}
             </div>
           </div>
@@ -381,7 +381,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-2 border-b border-gray-200 flex justify-center">
             <div className="h-10 w-10 bg-ocp-primary rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
               </span>
             </div>
           </div>

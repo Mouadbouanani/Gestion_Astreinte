@@ -274,7 +274,7 @@ class RotationEquitableService {
       'chef_secteur': 0.8 // Moins de gardes car plus de supervision
     };
 
-    const poids = { ...poidsDefaut, ...poidsParRole };
+    // const poids = { ...poidsDefaut, ...poidsParRole };
     
     // Calcul de la charge équitable pondérée
     let chargeEquitable = totalGardes / nombreUtilisateurs;
@@ -294,7 +294,7 @@ class RotationEquitableService {
       if (!statistiques) return [];
 
       const recommandations: string[] = [];
-      const moyenne = statistiques.moyenneGardes;
+      // const moyenne = statistiques.moyenneGardes;
 
       // Vérifier les utilisateurs sous-chargés
       if (statistiques.utilisateursSousCharge.length > 0) {

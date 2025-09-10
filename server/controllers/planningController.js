@@ -3,6 +3,7 @@ import Planning from '../models/Planning.js';
 import Service from '../models/Service.js';
 import Secteur from '../models/Secteur.js';
 import User from '../models/User.js';
+import Holiday from '../models/Holiday.js';
 import Indisponibilite from '../models/Indisponibilite.js';
 
 // Utility: validate ObjectId
@@ -53,34 +54,44 @@ const checkPlanningPermissions = async (user, planningData) => {
 };
 
 // Utility: enumerate weekend and holiday dates between two dates (inclusive)
-function enumerateWeekendAndHolidayDates(startDate, endDate) {
+async function enumerateWeekendAndHolidayDates(startDate, endDate) {
   const dates = [];
   const current = new Date(startDate);
   current.setHours(0, 0, 0, 0);
   const end = new Date(endDate);
   end.setHours(23, 59, 59, 999);
 
-  // Moroccan public holidays 2024-2025
-  const holidays = [
-    '2024-01-01', // Nouvel An
-    '2024-01-11', // Manifeste de l'Indépendance
-    '2024-05-01', // Fête du Travail
-    '2024-07-30', // Fête du Trône
-    '2024-08-14', // Oued Ed-Dahab
-    '2024-08-20', // Révolution du Roi et du Peuple
-    '2024-08-21', // Fête de la Jeunesse
-    '2024-11-06', // Marche Verte
-    '2024-11-18', // Fête de l'Indépendance
-    '2025-01-01', // Nouvel An
-    '2025-01-11', // Manifeste de l'Indépendance
-    '2025-05-01', // Fête du Travail
-    '2025-07-30', // Fête du Trône
-    '2025-08-14', // Oued Ed-Dahab
-    '2025-08-20', // Révolution du Roi et du Peuple
-    '2025-08-21', // Fête de la Jeunesse
-    '2025-11-06', // Marche Verte
-    '2025-11-18'  // Fête de l'Indépendance
-  ];
+  // Récupérer les années concernées par la période
+  const years = [];
+  const tempDate = new Date(current);
+  while (tempDate <= end) {
+    const year = tempDate.getFullYear();
+    if (!years.includes(year)) {
+      years.push(year);
+    }
+    tempDate.setFullYear(tempDate.getFullYear() + 1);
+  }
+
+  // Récupérer tous les jours fériés actifs pour ces années
+  let holidays = [];
+  try {
+    holidays = await Holiday.find({
+      year: { $in: years },
+      country: 'MA',
+      isActive: true
+    }).select('date name type');
+  } catch (error) {
+    console.warn('Erreur récupération jours fériés:', error);
+    // Fallback avec les dates fixes uniquement
+    holidays = getStaticHolidays(years);
+  }
+
+  // Créer un Set pour recherche rapide
+  const holidayMap = new Map();
+  holidays.forEach(h => {
+    const dateStr = new Date(h.date).toISOString().split('T')[0];
+    holidayMap.set(dateStr, { name: h.name, type: h.type });
+  });
 
   while (current <= end) {
     const day = current.getDay();
@@ -88,16 +99,55 @@ function enumerateWeekendAndHolidayDates(startDate, endDate) {
     
     // Check if it's a weekend (Saturday=6, Sunday=0)
     if (day === 6 || day === 0) {
-      dates.push({ date: new Date(current), type: 'weekend' });
+      dates.push({ 
+        date: new Date(current), 
+        type: 'weekend',
+        name: day === 6 ? 'Samedi' : 'Dimanche'
+      });
     }
     // Check if it's a holiday
-    else if (holidays.includes(dateString)) {
-      dates.push({ date: new Date(current), type: 'holiday' });
+    else if (holidayMap.has(dateString)) {
+      const holiday = holidayMap.get(dateString);
+      dates.push({ 
+        date: new Date(current), 
+        type: 'holiday',
+        name: holiday.name,
+        holidayType: holiday.type
+      });
     }
     
     current.setDate(current.getDate() + 1);
   }
+  
   return dates;
+}
+
+// 4. AJOUTER UNE FONCTION DE FALLBACK
+function getStaticHolidays(years) {
+  const staticHolidays = [];
+  
+  years.forEach(year => {
+    // Jours fériés fixes marocains
+    const fixedHolidays = [
+      { date: `${year}-01-01`, name: 'Nouvel An', type: 'fixed' },
+      { date: `${year}-01-11`, name: 'Manifeste de l\'Indépendance', type: 'fixed' },
+      { date: `${year}-05-01`, name: 'Fête du Travail', type: 'fixed' },
+      { date: `${year}-07-30`, name: 'Fête du Trône', type: 'fixed' },
+      { date: `${year}-08-14`, name: 'Oued Ed-Dahab', type: 'fixed' },
+      { date: `${year}-08-20`, name: 'Révolution du Roi et du Peuple', type: 'fixed' },
+      { date: `${year}-08-21`, name: 'Fête de la Jeunesse', type: 'fixed' },
+      { date: `${year}-11-06`, name: 'Marche Verte', type: 'fixed' },
+      { date: `${year}-11-18`, name: 'Fête de l\'Indépendance', type: 'fixed' }
+    ];
+    
+    staticHolidays.push(...fixedHolidays.map(h => ({
+      date: new Date(h.date),
+      name: h.name,
+      type: h.type
+    })));
+  });
+  
+  return staticHolidays;
 }
 
 // Utility: fetch approved unavailability for a set of users within a date range
@@ -306,7 +356,7 @@ export const generatePlanning = async (req, res) => {
     }
 
     // Weekends and holidays only
-    const weekendHolidayDates = enumerateWeekendAndHolidayDates(dateDebut, dateFin);
+    const weekendHolidayDates = await enumerateWeekendAndHolidayDates(dateDebut, dateFin);
     if (weekendHolidayDates.length === 0) {
       return res.status(400).json({ success: false, message: 'Aucun weekend ou jour férié dans la période' });
     }
@@ -377,6 +427,159 @@ export const generatePlanning = async (req, res) => {
   } catch (error) {
     console.error('Erreur génération planning:', error);
     res.status(500).json({ success: false, message: 'Erreur génération planning', error: error.message });
+  }
+};
+
+// 6. AJOUTER DES ENDPOINTS POUR GÉRER LES JOURS FÉRIÉS
+// Récupérer les jours fériés d'une année
+export const getHolidaysByYear = async (req, res) => {
+  try {
+    const { year } = req.params;
+    const holidays = await Holiday.find({ 
+      year: parseInt(year), 
+      country: 'MA',
+      isActive: true 
+    }).sort({ date: 1 });
+    
+    res.json({ success: true, data: holidays });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Ajouter un jour férié
+export const addHoliday = async (req, res) => {
+  try {
+    // Vérifier les permissions (admin seulement)
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    const { name, date, type, description } = req.body;
+    const year = new Date(date).getFullYear();
+    
+    // Vérifier si le jour férié existe déjà
+    const existing = await Holiday.findOne({
+      date: new Date(date),
+      country: 'MA'
+    });
+    
+    if (existing) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Un jour férié existe déjà à cette date' 
+      });
+    }
+    
+    const holiday = await Holiday.create({
+      name,
+      date: new Date(date),
+      year,
+      type,
+      description,
+      country: 'MA'
+    });
+    
+    res.status(201).json({ success: true, data: holiday });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Modifier un jour férié
+export const updateHoliday = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    const { id } = req.params;
+    const updates = req.body;
+    
+    if (updates.date) {
+      updates.year = new Date(updates.date).getFullYear();
+    }
+    
+    const holiday = await Holiday.findByIdAndUpdate(id, updates, { new: true });
+    
+    if (!holiday) {
+      return res.status(404).json({ success: false, message: 'Jour férié introuvable' });
+    }
+    
+    res.json({ success: true, data: holiday });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Supprimer un jour férié
+export const deleteHoliday = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    const { id } = req.params;
+    const holiday = await Holiday.findByIdAndDelete(id);
+    
+    if (!holiday) {
+      return res.status(404).json({ success: false, message: 'Jour férié introuvable' });
+    }
+    
+    res.json({ success: true, message: 'Jour férié supprimé' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 7. FONCTION POUR INITIALISER LES JOURS FÉRIÉS FIXES
+export const initializeFixedHolidays = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    const { year } = req.body;
+    const currentYear = year || new Date().getFullYear();
+    
+    const fixedHolidays = [
+      { name: 'Nouvel An', date: `${currentYear}-01-01`, type: 'fixed' },
+      { name: 'Manifeste de l\'Indépendance', date: `${currentYear}-01-11`, type: 'fixed' },
+      { name: 'Fête du Travail', date: `${currentYear}-05-01`, type: 'fixed' },
+      { name: 'Fête du Trône', date: `${currentYear}-07-30`, type: 'fixed' },
+      { name: 'Oued Ed-Dahab', date: `${currentYear}-08-14`, type: 'fixed' },
+      { name: 'Révolution du Roi et du Peuple', date: `${currentYear}-08-20`, type: 'fixed' },
+      { name: 'Fête de la Jeunesse', date: `${currentYear}-08-21`, type: 'fixed' },
+      { name: 'Marche Verte', date: `${currentYear}-11-06`, type: 'fixed' },
+      { name: 'Fête de l\'Indépendance', date: `${currentYear}-11-18`, type: 'fixed' }
+    ];
+
+    const created = [];
+    for (const holiday of fixedHolidays) {
+      const existing = await Holiday.findOne({
+        date: new Date(holiday.date),
+        country: 'MA'
+      });
+      
+      if (!existing) {
+        const newHoliday = await Holiday.create({
+          name: holiday.name,
+          date: new Date(holiday.date),
+          year: currentYear,
+          type: holiday.type,
+          country: 'MA'
+        });
+        created.push(newHoliday);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `${created.length} jours fériés fixes créés pour ${currentYear}`,
+      data: created 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

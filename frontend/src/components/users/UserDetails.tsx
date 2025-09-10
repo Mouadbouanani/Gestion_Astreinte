@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { User } from '@/types';
+import { getSiteName, getSecteurName, getServiceName } from '@/utils/typeGuards';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -191,8 +192,8 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                 {user.site && (
                   <div>
                     <p className="text-sm text-gray-500">Site</p>
-                    <p className="text-gray-900 font-medium">{user.site.name}</p>
-                    {user.site.code && (
+                    <p className="text-gray-900 font-medium">{getSiteName(user.site)}</p>
+                    {typeof user.site === 'object' && user.site.code && (
                       <p className="text-sm text-gray-600">Code: {user.site.code}</p>
                     )}
                   </div>
@@ -201,8 +202,8 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                 {user.secteur && (
                   <div>
                     <p className="text-sm text-gray-500">Secteur</p>
-                    <p className="text-gray-900 font-medium">{user.secteur.name}</p>
-                    {user.secteur.code && (
+                    <p className="text-gray-900 font-medium">{getSecteurName(user.secteur)}</p>
+                    {typeof user.secteur === 'object' && user.secteur.code && (
                       <p className="text-sm text-gray-600">Code: {user.secteur.code}</p>
                     )}
                   </div>
@@ -211,8 +212,8 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                 {user.service && (
                   <div>
                     <p className="text-sm text-gray-500">Service</p>
-                    <p className="text-gray-900 font-medium">{user.service.name}</p>
-                    {user.service.code && (
+                    <p className="text-gray-900 font-medium">{getServiceName(user.service)}</p>
+                    {typeof user.service === 'object' && user.service.code && (
                       <p className="text-sm text-gray-600">Code: {user.service.code}</p>
                     )}
                   </div>
@@ -235,7 +236,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                   <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm text-gray-500">Créé le</p>
-                    <p className="text-gray-900">{formatDate(user.createdAt)}</p>
+                    <p className="text-gray-900">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : 'N/A'}</p>
                   </div>
                 </div>
 
@@ -243,7 +244,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                   <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm text-gray-500">Dernière modification</p>
-                    <p className="text-gray-900">{formatDate(user.updatedAt)}</p>
+                    <p className="text-gray-900">{user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('fr-FR') : 'N/A'}</p>
                   </div>
                 </div>
 

@@ -60,27 +60,40 @@ const Dashboard: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Load dashboard stats
-      const response = await apiService.getDashboardStats();
+      // Set a timeout to avoid infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 8000)
+      );
       
-      if (response.success && response.data) {
-        setStats(response.data);
-      } else {
-        const mockStats: DashboardStats = {
-          totalSites: 8,
-          totalSecteurs: 40,
-          totalServices: 112,
-          totalUsers: 18,
-          recentPannes: []
-        };
-        setStats(mockStats);
-      }
+      const loadPromise = async () => {
+        // Load dashboard stats
+        const response = await apiService.getDashboardStats();
+        
+        if (response.success && response.data) {
+          setStats(response.data);
+        } else {
+          const mockStats: DashboardStats = {
+            totalSites: 8,
+            totalSecteurs: 40,
+            totalServices: 112,
+            totalUsers: 18,
+            recentPannes: []
+          };
+          setStats(mockStats);
+        }
 
-      // Load recent pannes
-      const pannes = await astreinteService.getPannesRecentes();
-      if (pannes.length > 0) {
-        setStats(prev => prev ? { ...prev, recentPannes: pannes } : null);
-      }
+        // Load recent pannes
+        try {
+          const pannes = await astreinteService.getPannesRecentes();
+          if (pannes.length > 0) {
+            setStats(prev => prev ? { ...prev, recentPannes: pannes } : null);
+          }
+        } catch (panneError) {
+          console.warn('Could not load recent pannes:', panneError);
+        }
+      };
+      
+      await Promise.race([loadPromise(), timeoutPromise]);
     } catch (error) {
       console.error('❌ Erreur chargement dashboard:', error);
       const mockStats: DashboardStats = {
@@ -527,7 +540,7 @@ const Dashboard: React.FC = () => {
                 <ChartBarIcon className="h-4 w-4 mr-2" />
                 Consulter
               </Button>
-              {(user.role === 'admin' || user.role === 'chef_secteur' || user.role === 'chef_service') && (
+              {( user.role === 'chef_secteur' || user.role === 'chef_service') && (
                 <Button
                   variant={viewMode === 'manage' ? 'primary' : 'secondary'}
                   size="sm"

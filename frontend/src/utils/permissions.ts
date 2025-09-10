@@ -49,13 +49,13 @@ export const canManageUser = (manager: User, targetUser: User): boolean => {
 
   // Chef secteur peut gérer dans son secteur
   if (manager.role === 'chef_secteur') {
-    return manager.secteur?._id === targetUser.secteur?._id &&
+    return (typeof manager.secteur === 'object' ? manager.secteur._id : manager.secteur) === (typeof targetUser.secteur === 'object' ? targetUser.secteur._id : targetUser.secteur) &&
            ['chef_service', 'ingenieur', 'collaborateur'].includes(targetUser.role);
   }
 
   // Chef service peut gérer les collaborateurs de son service
   if (manager.role === 'chef_service') {
-    return manager.service?._id === targetUser.service?._id &&
+    return (typeof manager.service === 'object' ? manager.service._id : manager.service) === (typeof targetUser.service === 'object' ? targetUser.service._id : targetUser.service) &&
            targetUser.role === 'collaborateur';
   }
 
@@ -73,22 +73,22 @@ export const canViewPlanning = (user: User, targetSecteurId?: string, targetServ
 
   // Chef secteur peut voir son secteur (ou tous si pas d'assignation spécifique)
   if (user.role === 'chef_secteur') {
-    return !targetSecteurId || user.secteur?._id === targetSecteurId;
+    return !targetSecteurId || (typeof user.secteur === 'object' ? user.secteur._id : user.secteur) === targetSecteurId;
   }
 
   // Chef service peut voir son service (ou tous si pas d'assignation spécifique)
   if (user.role === 'chef_service') {
-    return !targetServiceId || user.service?._id === targetServiceId;
+    return !targetServiceId || (typeof user.service === 'object' ? user.service._id : user.service) === targetServiceId;
   }
 
   // Ingénieur peut voir son secteur
   if (user.role === 'ingenieur') {
-    return user.secteur?._id === targetSecteurId;
+    return (typeof user.secteur === 'object' ? user.secteur._id : user.secteur) === targetSecteurId;
   }
 
   // Collaborateur peut voir son service
   if (user.role === 'collaborateur') {
-    return user.service?._id === targetServiceId;
+    return (typeof user.service === 'object' ? user.service._id : user.service) === targetServiceId;
   }
 
   return false;
@@ -105,12 +105,12 @@ export const canEditPlanning = (user: User, targetSecteurId?: string, targetServ
 
   // Chef secteur peut modifier les plannings de son secteur (ou tous si pas d'assignation spécifique)
   if (user.role === 'chef_secteur') {
-    return !targetSecteurId || user.secteur?._id === targetSecteurId;
+    return !targetSecteurId || (typeof user.secteur === 'object' ? user.secteur._id : user.secteur) === targetSecteurId;
   }
 
   // Chef service peut modifier les plannings de son service (ou tous si pas d'assignation spécifique)
   if (user.role === 'chef_service') {
-    return !targetServiceId || user.service?._id === targetServiceId;
+    return !targetServiceId || (typeof user.service === 'object' ? user.service._id : user.service) === targetServiceId;
   }
 
   return false;

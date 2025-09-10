@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Building } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiService } from '../../services/api';
-import { Site, Secteur, User } from '../../types';
+import type { Site, Secteur, User } from '../../types';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
@@ -11,7 +11,7 @@ interface SecteurFormData {
   code: string;
   description: string;
   site: string;
-  chefSecteur: string;
+  chefSecteur: string | undefined;
 }
 
 const SecteurManagement: React.FC = () => {
@@ -37,7 +37,7 @@ const SecteurManagement: React.FC = () => {
     try {
       setLoading(true);
       const [secteursRes, sitesRes, usersRes] = await Promise.all([
-        apiService.getSecteurs(),
+        apiService.getAllSecteurs(),
         apiService.getSites(),
         apiService.getUsers()
       ]);
@@ -67,13 +67,13 @@ const SecteurManagement: React.FC = () => {
         code: formData.code.trim().toUpperCase(),
         description: formData.description.trim(),
         site: formData.site,
-        chefSecteur: formData.chefSecteur || null
+        chefSecteur: formData.chefSecteur || undefined
       };
 
       let response;
       if (editingSecteur) {
         // For update, we need the site ID from the secteur
-        const siteId = editingSecteur.site?._id || editingSecteur.site;
+        const siteId = typeof editingSecteur.site === 'object' ? editingSecteur.site._id : editingSecteur.site;
         response = await apiService.updateSecteur(siteId, editingSecteur._id, payload);
       } else {
         // For create, site ID is in the payload
@@ -116,7 +116,7 @@ const SecteurManagement: React.FC = () => {
 
     try {
       // Get site ID from the secteur
-      const siteId = secteur.site?._id || secteur.site;
+      const siteId = typeof secteur.site === 'object' ? secteur.site._id : secteur.site;
       const response = await apiService.deleteSecteur(siteId, secteur._id);
       if (response.success) {
         toast.success('Secteur supprimé');

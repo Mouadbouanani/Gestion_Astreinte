@@ -6,7 +6,7 @@ import type { StatistiquesRotation } from '@/types/rotation-equitable.types';
 import {
   ChartBarIcon,
   UserGroupIcon,
-  ClockIcon,
+  // ClockIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ArrowPathIcon,
@@ -38,17 +38,22 @@ const RotationEquitableStats: React.FC<RotationEquitableStatsProps> = ({
     try {
       // Données de test temporaires en attendant l'API
       const testStats: StatistiquesRotation = {
-        totalGardes: 12,
-        gardesParUtilisateur: {
-          'user1': 3,
-          'user2': 2,
-          'user3': 4,
-          'user4': 3
+        secteurId: 'test-secteur',
+        periode: {
+          debut: '2024-01-01',
+          fin: '2024-01-31'
         },
+        totalGardes: 12,
         moyenneGardes: 3.0,
         utilisateursSousCharge: ['user2'],
         utilisateursSurCharge: ['user3'],
-        prochaineRotation: ['user1', 'user4']
+        repartitionParUtilisateur: {
+          'user1': { nom: 'User 1', nombreGardes: 3, pourcentageCharge: 25 },
+          'user2': { nom: 'User 2', nombreGardes: 2, pourcentageCharge: 17 },
+          'user3': { nom: 'User 3', nombreGardes: 4, pourcentageCharge: 33 },
+          'user4': { nom: 'User 4', nombreGardes: 3, pourcentageCharge: 25 }
+        },
+        equiteScore: 85
       };
       
       setStatistiques(testStats);
@@ -206,24 +211,27 @@ const RotationEquitableStats: React.FC<RotationEquitableStatsProps> = ({
         <Card.Body>
           {showDetails ? (
             <div className="space-y-3">
-              {Object.entries(statistiques.gardesParUtilisateur).map(([userId, gardes]) => (
+              {Object.entries(statistiques.repartitionParUtilisateur).map(([userId, repartition]) => (
                 <div key={userId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <UserGroupIcon className="h-5 w-5 text-gray-400" />
                     <span className="font-medium text-gray-900">
-                      Utilisateur {userId.slice(-4)}
+                      {repartition.nom}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className={`font-semibold ${getUtilisateurColor(gardes)}`}>
-                      {gardes} gardes
+                    <span className={`font-semibold ${getUtilisateurColor(repartition.nombreGardes)}`}>
+                      {repartition.nombreGardes} gardes
                     </span>
-                    {gardes < statistiques.moyenneGardes * 0.8 && (
+                    <span className="text-sm text-gray-500">
+                      ({repartition.pourcentageCharge}%)
+                    </span>
+                    {repartition.nombreGardes < statistiques.moyenneGardes * 0.8 && (
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                         Sous-chargé
                       </span>
                     )}
-                    {gardes > statistiques.moyenneGardes * 1.2 && (
+                    {repartition.nombreGardes > statistiques.moyenneGardes * 1.2 && (
                       <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
                         Sur-chargé
                       </span>
@@ -278,28 +286,7 @@ const RotationEquitableStats: React.FC<RotationEquitableStatsProps> = ({
         </Card.Body>
       </Card>
 
-      {/* Prochaine rotation suggérée */}
-      {statistiques.prochaineRotation.length > 0 && (
-        <Card>
-          <Card.Header>
-            <h4 className="text-md font-medium text-gray-900">
-              Prochaine Rotation Suggérée
-            </h4>
-          </Card.Header>
-          <Card.Body>
-            <div className="flex flex-wrap gap-2">
-              {statistiques.prochaineRotation.map((utilisateur, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
-                >
-                  {utilisateur}
-                </span>
-              ))}
-            </div>
-          </Card.Body>
-        </Card>
-      )}
+      {/* Prochaine rotation suggérée - removed as not in interface */}
     </div>
   );
 };

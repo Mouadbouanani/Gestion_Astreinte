@@ -44,12 +44,12 @@ const Header: React.FC = () => {
           >
             <div className="h-8 w-8 bg-ocp-primary rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
               </span>
             </div>
             <div className="hidden md:block text-left">
               <p className="text-sm font-medium text-gray-900">
-                {user.firstName} {user.lastName}
+                {user.firstName || ''} {user.lastName || ''}
               </p>
               <p className="text-xs text-gray-500">{user.email}</p>
             </div>
@@ -60,7 +60,7 @@ const Header: React.FC = () => {
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
               <div className="px-4 py-2 border-b border-gray-200">
                 <p className="text-sm font-medium text-gray-900">
-                  {user.firstName} {user.lastName}
+                  {user.firstName || ''} {user.lastName || ''}
                 </p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>

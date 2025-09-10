@@ -1,5 +1,6 @@
+// Simplified PlanningManagement Component
 import React, { useEffect, useMemo, useState } from 'react';
-import Card from '@/components/ui/Card';
+// import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
 import weekendHolidayService from '@/services/weekend-holiday.service';
@@ -27,16 +28,14 @@ const PlanningManagement: React.FC = () => {
   }), []);
 
   useEffect(() => {
-    // Charger planning w/k + fériés (simple)
     (async () => {
       const data = await weekendHolidayService.getWeekendHolidayPlanning(
-        periode.startDate,
-        periode.endDate,
-        secteurId
+          periode.startDate,
+          periode.endDate,
+          secteurId
       );
       setPlannings(data);
 
-      // Construire rotation initiale simple à partir des gardes planifiées (uniques, ordre d'apparition)
       const seen = new Set<string>();
       const order: string[] = [];
       const map: Record<string, { id: string; name: string }> = {};
@@ -52,13 +51,11 @@ const PlanningManagement: React.FC = () => {
       setUserMap(map);
     })();
 
-    // Charger statistiques rotation pour offrir un tri de réinitialisation simple
     (async () => {
       const s = await rotationEquitableService.getStatistiquesRotation(secteurId || '', serviceId, periode);
       if (s) setStats(s);
     })();
 
-    // Charger pannes récentes (affichage seulement)
     (async () => {
       const p = await astreinteService.getPannesRecentes();
       setPannesRecentes(p);
@@ -86,7 +83,6 @@ const PlanningManagement: React.FC = () => {
   };
 
   const moveCurrentWeekendGuardsToEnd = () => {
-    // Déterminer prochain weekend (samedi/dimanche à venir) et déplacer leurs gardes à la fin
     const today = new Date();
     const nextSaturday = new Date(today);
     nextSaturday.setDate(today.getDate() + ((6 - today.getDay() + 7) % 7));
@@ -113,7 +109,6 @@ const PlanningManagement: React.FC = () => {
   };
 
   const recreateRotationOrder = () => {
-    // Simple: trier par charge croissante si stats disponibles, sinon garder ordre actuel
     if (stats?.repartitionParUtilisateur) {
       const entries = Object.entries(stats.repartitionParUtilisateur);
       const knownIds = new Set(rotationOrder);
@@ -122,10 +117,9 @@ const PlanningManagement: React.FC = () => {
         const cb = stats.repartitionParUtilisateur[b]?.nombreGardes ?? 0;
         return ca - cb;
       });
-      // Ajouter tout utilisateur présent en stats mais pas encore listé
       const rest = entries
-        .map(([id]) => id)
-        .filter((id) => !knownIds.has(id));
+          .map(([id]) => id)
+          .filter((id) => !knownIds.has(id));
       setRotationOrder([...sortedKnown, ...rest]);
     }
   };
@@ -133,11 +127,10 @@ const PlanningManagement: React.FC = () => {
   const saveRotationOrder = async () => {
     setSaving(true);
     try {
-      // Essayer d'appeler un endpoint si dispo, sinon fallback silencieux
       const ok = await rotationEquitableService.reorderRotation(
-        secteurId,
-        serviceId,
-        rotationOrder
+          secteurId,
+          serviceId,
+          rotationOrder
       );
       if (!ok) {
         console.warn('Reorder endpoint not available, kept client-side only');
@@ -149,145 +142,137 @@ const PlanningManagement: React.FC = () => {
 
   const getUrgenceColor = (urgence: string) => {
     switch (urgence) {
-      case 'faible': return 'bg-green-100 text-green-800';
-      case 'moyenne': return 'bg-yellow-100 text-yellow-800';
-      case 'haute': return 'bg-orange-100 text-orange-800';
-      case 'critique': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'faible': return 'text-green-700 bg-green-50';
+      case 'moyenne': return 'text-yellow-700 bg-yellow-50';
+      case 'haute': return 'text-orange-700 bg-orange-50';
+      case 'critique': return 'text-red-700 bg-red-50';
+      default: return 'text-gray-700 bg-gray-50';
     }
   };
 
   const getStatutColor = (statut: string) => {
     switch (statut) {
-      case 'declaree': return 'bg-blue-100 text-blue-800';
-      case 'ouverte': return 'bg-yellow-100 text-yellow-800';
-      case 'en_cours': return 'bg-orange-100 text-orange-800';
-      case 'resolue': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'declaree': return 'text-blue-700 bg-blue-50';
+      case 'ouverte': return 'text-yellow-700 bg-yellow-50';
+      case 'en_cours': return 'text-orange-700 bg-orange-50';
+      case 'resolue': return 'text-green-700 bg-green-50';
+      default: return 'text-gray-700 bg-gray-50';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'technique': return 'bg-blue-100 text-blue-800';
-      case 'securite': return 'bg-red-100 text-red-800';
-      case 'maintenance': return 'bg-purple-100 text-purple-800';
-      case 'autre': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'technique': return 'text-blue-700 bg-blue-50';
+      case 'securite': return 'text-red-700 bg-red-50';
+      case 'maintenance': return 'text-purple-700 bg-purple-50';
+      case 'autre': return 'text-gray-700 bg-gray-50';
+      default: return 'text-gray-700 bg-gray-50';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Gestion du Planning (Weekends & Jours Fériés)</h1>
-        <div className="space-x-2">
-          <Button variant="secondary" onClick={moveCurrentWeekendGuardsToEnd}>
-            Mettre les gardes du prochain weekend en fin de rotation
-          </Button>
-          <Button variant="secondary" onClick={recreateRotationOrder}>
-            Recréer l'ordre de rotation
-          </Button>
-          <Button variant="primary" onClick={saveRotationOrder} disabled={saving}>
-            {saving ? 'Enregistrement...' : 'Enregistrer l\'ordre'}
-          </Button>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestion du Planning</h1>
+          <div className="flex gap-2">
+            <Button onClick={moveCurrentWeekendGuardsToEnd}>
+              Prochain weekend en fin
+            </Button>
+            <Button onClick={recreateRotationOrder}>
+              Recréer rotation
+            </Button>
+            <Button onClick={saveRotationOrder} disabled={saving}>
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <Card.Header>
-            <h3 className="text-lg font-medium text-gray-900">Rotation actuelle</h3>
-            <p className="text-sm text-gray-600">Montez/descendez les utilisateurs pour ajuster l'ordre</p>
-          </Card.Header>
-          <Card.Body>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Rotation */}
+          <div className="bg-white rounded-lg border p-4">
+            <h3 className="font-medium text-gray-900 mb-3">Ordre de rotation</h3>
             <div className="space-y-2">
-              {rotationOrder.map((id) => (
-                <div key={id} className="flex items-center justify-between border rounded p-2">
-                  <span className="text-sm font-medium">{userMap[id]?.name || id}</span>
-                  <div className="space-x-2">
-                    <Button size="sm" variant="ghost" onClick={() => moveUserUp(id)}>↑</Button>
-                    <Button size="sm" variant="ghost" onClick={() => moveUserDown(id)}>↓</Button>
+              {rotationOrder.map((id, index) => (
+                  <div key={id} className="flex items-center justify-between p-2 border rounded">
+                <span className="text-sm">
+                  {index + 1}. {userMap[id]?.name || id}
+                </span>
+                    <div className="flex gap-1">
+                      <button
+                          onClick={() => moveUserUp(id)}
+                          className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                      >
+                        ↑
+                      </button>
+                      <button
+                          onClick={() => moveUserDown(id)}
+                          className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                      >
+                        ↓
+                      </button>
+                    </div>
                   </div>
-                </div>
               ))}
               {rotationOrder.length === 0 && (
-                <div className="text-sm text-gray-500">Aucune donnée de rotation</div>
+                  <p className="text-sm text-gray-500">Aucune rotation</p>
               )}
             </div>
-          </Card.Body>
-        </Card>
+          </div>
 
-        <Card>
-          <Card.Header>
-            <h3 className="text-lg font-medium text-gray-900">Prochains Weekends/Fériés</h3>
-            <p className="text-sm text-gray-600">Affectations planifiées (aperçu)</p>
-          </Card.Header>
-          <Card.Body>
-            <div className="space-y-3">
-              {plannings.slice(0, 8).map((p) => (
-                <div key={`${p.id}-${p.date}`} className="flex items-center justify-between border rounded p-2">
-                  <div className="text-sm">
-                    <div className="font-medium">{new Date(p.date).toLocaleDateString('fr-FR')}</div>
-                    <div className="text-gray-600">{p.type === 'holiday' ? 'Jour férié' : 'Weekend'}</div>
+          {/* Planning */}
+          <div className="bg-white rounded-lg border p-4">
+            <h3 className="font-medium text-gray-900 mb-3">Prochaines gardes</h3>
+            <div className="space-y-2">
+              {plannings.slice(0, 6).map((p) => (
+                  <div key={`${p.id}-${p.date}`} className="p-2 border rounded">
+                    <div className="text-sm font-medium">
+                      {new Date(p.date).toLocaleDateString('fr-FR')}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {p.garde.firstName} {p.garde.lastName}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {p.type === 'holiday' ? 'Férié' : 'Weekend'}
+                    </div>
                   </div>
-                  <div className="text-sm font-medium">{p.garde.firstName} {p.garde.lastName}</div>
-                </div>
               ))}
               {plannings.length === 0 && (
-                <div className="text-sm text-gray-500">Aucun élément planifié</div>
+                  <p className="text-sm text-gray-500">Aucun planning</p>
               )}
             </div>
-          </Card.Body>
-        </Card>
+          </div>
 
-        <Card>
-          <Card.Header>
-            <h3 className="text-lg font-medium text-gray-900">Pannes récentes</h3>
-            <p className="text-sm text-gray-600">Lecture seule. La déclaration se fait depuis le tableau de bord.</p>
-          </Card.Header>
-          <Card.Body>
-            <div className="space-y-3">
-              {pannesRecentes.slice(0, 8).map((panne) => (
-                <div key={panne.id} className="border rounded p-2">
-                  <div className="text-sm font-medium">{panne.titre}</div>
-                  <div className="text-xs text-gray-600 mb-2">
-                    {new Date(panne.dateCreation).toLocaleString('fr-FR')}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(panne.type)}`}>
-                      {panne.type}
-                    </span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getUrgenceColor(panne.urgence)}`}>
-                      {panne.urgence}
-                    </span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatutColor(panne.statut)}`}>
-                      {panne.statut}
-                    </span>
-                  </div>
-                  {panne.site && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      Site: {panne.site.name}
+          {/* Pannes */}
+          <div className="bg-white rounded-lg border p-4">
+            <h3 className="font-medium text-gray-900 mb-3">Pannes récentes</h3>
+            <div className="space-y-2">
+              {pannesRecentes.slice(0, 6).map((panne) => (
+                  <div key={panne.id} className="p-2 border rounded">
+                    <div className="text-sm font-medium">{panne.titre}</div>
+                    <div className="text-xs text-gray-600 mb-1">
+                      {new Date(panne.dateCreation).toLocaleDateString('fr-FR')}
                     </div>
-                  )}
-                </div>
+                    <div className="flex gap-1">
+                  <span className={`px-2 py-0.5 text-xs rounded ${getTypeColor(panne.type)}`}>
+                    {panne.type}
+                  </span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${getUrgenceColor(panne.urgence)}`}>
+                    {panne.urgence}
+                  </span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${getStatutColor(panne.statut)}`}>
+                    {panne.statut}
+                  </span>
+                    </div>
+                  </div>
               ))}
               {pannesRecentes.length === 0 && (
-                <div className="text-sm text-gray-500">Aucune panne récente</div>
+                  <p className="text-sm text-gray-500">Aucune panne</p>
               )}
             </div>
-          </Card.Body>
-        </Card>
+          </div>
+        </div>
       </div>
-
-      <div className="text-xs text-gray-500">
-        Remarque: Ce module est limité aux weekends et jours fériés marocains. La déclaration de panne est disponible dans le tableau de bord principal.
-      </div>
-    </div>
   );
 };
 
 export default PlanningManagement;
-
-
-

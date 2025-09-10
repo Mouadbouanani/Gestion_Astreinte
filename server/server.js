@@ -19,9 +19,10 @@ import secteursServicesRoutes from './routes/secteurs-services.js';
 import authJwtRoutes from './routes/auth-jwt.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
+import holidayRoutes from './routes/holidayRoutes.js';
 import indisponibiliteRoutes from './routes/indisponibilites.js';
 import panneRoutes from './routes/pannes.js';
-
+import { flexibleAuth } from './middleware/auth-mock.js'; // Import flexibleAuth
 const app = express();
 const PORT = process.env.PORT || 5050;
 
@@ -48,6 +49,15 @@ app.use(cors({
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    message: 'OCP Astreinte API is running'
+  });
 });
 
 // Connexion à MongoDB
@@ -77,6 +87,8 @@ app.get('/health', (req, res) => {
     version: '1.0.0'
   });
 });
+
+app.use('/api/holidays', holidayRoutes);
 
 app.get('/', (req, res) => {
   res.json({
@@ -331,7 +343,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 // Get dashboard statistics
-app.get('/api/dashboard/stats', async (req, res) => {
+app.get('/api/dashboard/stats', flexibleAuth, async (req, res) => {
   try {
     // Get counts from database
     const totalSites = await Site.countDocuments({ isActive: true });
@@ -853,7 +865,7 @@ app.use('/api/unavailability', indisponibiliteRoutes);
 
 // Planning routes
 import planningRoutes from './routes/plannings.js';
-app.use('/api/plannings', planningRoutes);
+app.use('/api/plannings', flexibleAuth, planningRoutes);
 
 // Pannes routes
 app.use('/api/pannes', panneRoutes);

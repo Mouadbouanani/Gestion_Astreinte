@@ -8,7 +8,6 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  MapPinIcon,
   UserGroupIcon,
   WrenchScrewdriverIcon,
   EyeIcon,
@@ -52,7 +51,7 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
   const [selectedSiteFilter, setSelectedSiteFilter] = useState<string>('');
 
   // Get siteId from props or user's site
-  const currentSiteId = siteId || user?.site?._id || user?.site;
+  const currentSiteId = siteId || (typeof user?.site === 'object' ? user.site._id : user?.site);
 
   // Check user permissions
   const canManageAllSecteurs = user?.role === 'admin';
@@ -105,9 +104,9 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
         } else {
           setSelectedSite(response.data?.[0] || null);
         }
-      } else if (canManageOwnSecteur && user?.site?._id) {
+      } else if (canManageOwnSecteur && typeof user?.site === 'object' && user.site._id) {
         // Chef secteur can only see their own site
-        const userSite = response.data?.find((site: Site) => site._id === user.site?._id);
+        const userSite = response.data?.find((site: Site) => site._id === (typeof user.site === 'object' ? user.site._id : user.site));
         setSelectedSite(userSite || null);
       }
     } catch (error) {
@@ -121,7 +120,7 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
         const response = await apiService.getSiteById(currentSiteId);
         if (response.data) {
           // Update the site in the list without changing selectedSite
-          setSites(prev => prev.map(s => s._id === currentSiteId ? response.data : s));
+          setSites(prev => prev.map(s => s._id === currentSiteId ? (response.data || s) : s));
         }
       }
     } catch (error) {
@@ -140,7 +139,7 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
       } else if (canManageOwnSecteur && user?.secteur) {
         // Chef secteur: fetch all secteurs and keep only their own
         const allResponse = await apiService.getAllSecteurs();
-        const own = (allResponse.data || []).find((s: Secteur) => s._id === user.secteur._id);
+        const own = (allResponse.data || []).find((s: Secteur) => s._id === (typeof user.secteur === 'object' ? user.secteur._id : user.secteur));
         setSecteurs(own ? [own] : []);
       }
     } catch (error) {
@@ -151,16 +150,16 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
     }
   }, []);
 
-  const handleSiteChange = (siteId: string) => {
-    // Only admin can change sites
-    if (!canManageAllSecteurs) return;
-    
-    const site = sites.find(s => s._id === siteId);
-    setSelectedSite(site || null);
-    if (site) {
-      loadSecteurs();
-    }
-  };
+  // const handleSiteChange = (siteId: string) => {
+  //   // Only admin can change sites
+  //   if (!canManageAllSecteurs) return;
+  //   
+  //   const site = sites.find(s => s._id === siteId);
+  //   setSelectedSite(site || null);
+  //   if (site) {
+  //     loadSecteurs();
+  //   }
+  // };
 
   const handleAdd = () => {
     // Only admin can add secteurs
@@ -170,7 +169,7 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
 
   const handleEdit = (secteur: Secteur) => {
     // Admin can edit any secteur, chef_secteur can only edit their own
-    if (canManageAllSecteurs || (canManageOwnSecteur && user?.secteur?._id === secteur._id)) {
+    if (canManageAllSecteurs || (canManageOwnSecteur && (typeof user?.secteur === 'object' ? user.secteur._id : user?.secteur) === secteur._id)) {
       setSelectedSecteur(secteur);
       setShowEditModal(true);
     }
@@ -236,10 +235,10 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
     }
   };
 
-  const getAvailableSecteurNames = () => {
-    const usedNames = secteurs.map(s => s.name);
-    return VALID_SECTEURS.filter(name => !usedNames.includes(name));
-  };
+  // const getAvailableSecteurNames = () => {
+  //   const usedNames = secteurs.map(s => s.name);
+  //   return VALID_SECTEURS.filter(name => !usedNames.includes(name));
+  // };
 
   const handleView = (secteur: Secteur) => {
     setSelectedSecteur(secteur);
@@ -291,7 +290,7 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
         <p className="mt-2 opacity-90">
           {canManageAllSecteurs 
             ? `Administration des secteurs - Site: ${selectedSite?.name || 'Sélectionnez un site'}`
-            : `Mon Secteur - ${user?.secteur?.name || 'Secteur'}`
+            : `Mon Secteur - ${(typeof user?.secteur === 'object' ? user.secteur.name : user?.secteur) || 'Secteur'}`
           }
         </p>
         {selectedSite && canManageAllSecteurs && (
@@ -533,7 +532,7 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
                       <EyeIcon className="h-4 w-4 mr-2" />
                       Voir
                     </Button>
-                    {(canManageAllSecteurs || (canManageOwnSecteur && user?.secteur?._id === secteur._id)) && (
+                    {(canManageAllSecteurs || (canManageOwnSecteur && (typeof user?.secteur === 'object' ? user.secteur._id : user?.secteur) === secteur._id)) && (
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -929,25 +928,25 @@ const SecteurPage: React.FC<SecteurPageProps> = ({ siteId }) => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
                         <div className="text-2xl font-bold text-blue-600">
-                          {selectedSecteur.statistics.totalServices || 0}
+                          {selectedSecteur.statistics.servicesCount || 0}
                         </div>
                         <div className="text-sm text-blue-600">Services</div>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
                         <div className="text-2xl font-bold text-green-600">
-                          {selectedSecteur.statistics.totalUsers || 0}
+                          {selectedSecteur.statistics.usersCount || 0}
                         </div>
                         <div className="text-sm text-green-600">Employés</div>
                       </div>
                       <div className="text-center p-3 bg-orange-50 rounded-lg">
                         <div className="text-2xl font-bold text-orange-600">
-                          {selectedSecteur.statistics.activeServices || 0}
+                          {selectedSecteur.statistics.servicesCount || 0}
                         </div>
                         <div className="text-sm text-orange-600">Services Actifs</div>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded-lg">
                         <div className="text-2xl font-bold text-purple-600">
-                          {selectedSecteur.statistics.tauxParticipation || 0}%
+                          {selectedSecteur.statistics.usersByRole?.collaborateurs || 0}%
                         </div>
                         <div className="text-sm text-purple-600">Participation</div>
                       </div>

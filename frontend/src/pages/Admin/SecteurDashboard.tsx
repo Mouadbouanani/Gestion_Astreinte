@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -12,9 +11,6 @@ import {
   PlusIcon,
   EyeIcon,
   PencilIcon,
-  MapPinIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
@@ -65,10 +61,10 @@ const SecteurDashboard: React.FC<SecteurDashboardProps> = ({ siteId }) => {
   const [site, setSite] = useState<Site | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSecteur, setSelectedSecteur] = useState<SecteurWithStats | null>(null);
+  // const [selectedSecteur, setSelectedSecteur] = useState<SecteurWithStats | null>(null);
 
   // Get siteId from props or user's site
-  const currentSiteId = siteId || user?.site?._id || user?.site;
+  const currentSiteId = siteId || (typeof user?.site === 'object' ? user.site._id : user?.site);
 
   useEffect(() => {
     if (currentSiteId) {
@@ -83,7 +79,7 @@ const SecteurDashboard: React.FC<SecteurDashboardProps> = ({ siteId }) => {
       // Load site info
       if (typeof currentSiteId === 'string') {
         const siteResponse = await apiService.getSiteById(currentSiteId);
-        setSite(siteResponse.data);
+        setSite(siteResponse.data || null);
       }
 
       // Load secteurs with statistics

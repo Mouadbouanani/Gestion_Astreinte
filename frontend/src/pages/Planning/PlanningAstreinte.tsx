@@ -12,7 +12,7 @@ import apiService from '@/services/api';
 import type { PlanningEntry } from '@/services/planning.service';
 import type { User, Site, Secteur, Service } from '@/types';
 import {
-  CalendarIcon,
+  // CalendarIcon,
   UserGroupIcon,
   ExclamationTriangleIcon,
   PlusIcon,
@@ -42,7 +42,7 @@ interface PlanningFilters {
 }
 
 const PlanningAstreinte: React.FC = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [gardeActuelle, setGardeActuelle] = useState<GardeActuelle | null>(null);
   const [pannes, setPannes] = useState<any[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -165,8 +165,8 @@ const PlanningAstreinte: React.FC = () => {
         titre: panneFormData.titre,
         description: panneFormData.description,
         urgence: panneFormData.urgence as 'faible' | 'moyenne' | 'critique',
-        secteurId: panneFormData.secteurId || undefined,
-        serviceId: panneFormData.serviceId || undefined
+        secteur: panneFormData.secteurId || undefined,
+        service: panneFormData.serviceId || undefined
       });
       setShowPanneModal(false);
       setPanneFormData({ titre: '', description: '', urgence: 'moyenne', secteurId: '', serviceId: '' });
@@ -231,14 +231,14 @@ const PlanningAstreinte: React.FC = () => {
     }
   };
 
-  const getStatutColor = (statut: string) => {
-    switch (statut) {
-      case 'ouverte': return 'text-red-600 bg-red-100';
-      case 'en_cours': return 'text-blue-600 bg-blue-100';
-      case 'resolue': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
+  // const getStatutColor = (statut: string) => {
+  //   switch (statut) {
+  //     case 'ouverte': return 'text-red-600 bg-red-100';
+  //     case 'en_cours': return 'text-blue-600 bg-blue-100';
+  //     case 'resolue': return 'text-green-600 bg-green-100';
+  //     default: return 'text-gray-600 bg-gray-100';
+  //   }
+  // };
 
   return (
     <div className="space-y-6">
@@ -504,7 +504,7 @@ const PlanningAstreinte: React.FC = () => {
                 <option value="">Sélectionner un personnel</option>
                 {users.map(user => (
                   <option key={user._id} value={user._id}>
-                    {user.firstName} {user.lastName} - {user.role}
+                    {user.firstName} {user.lastName} 
                   </option>
                 ))}
               </Select>

@@ -9,9 +9,9 @@ import { Dashboard } from '@/pages/Dashboard';
 
 import PlanningAstreinte from '@/pages/Planning/PlanningAstreinte';
 import PlanningManagement from '@/pages/Planning/PlanningManagement';
-import { SitesPage, SecteurPage, ServicePage, SecteurDashboard, UserManagement } from "@/pages/Admin";
-import { MonSecteur as NewMonSecteur, MesIngenieurs } from '@/pages/ChefSecteur';
-import { MonService as NewMonService, MonEquipe } from '@/pages/ChefService';
+import { SitesPage, SecteurPage, ServicePage, ServiceManagement, SecteurDashboard, UserManagement } from "@/pages/Admin";
+import { MonSecteur as NewMonSecteur, MesIngenieurs, ServiceManagement as ChefSecteurServiceManagement, UserManagement as ChefSecteurUserManagement } from '@/pages/ChefSecteur';
+import { MonService as NewMonService, MonEquipe, UserManagement as ChefServiceUserManagement } from '@/pages/ChefService';
 
 function App() {
   return (
@@ -29,6 +29,9 @@ function App() {
 
               {/* Dashboard accessible à tous */}
               <Route path="dashboard" element={<Dashboard />} />
+
+              {/* Planning d'astreinte - accessible à tous les utilisateurs (pour démo) */}
+              <Route path="planning" element={<PlanningAstreinte />} />
             </Route>
 
             {/* Routes protégées nécessitant une authentification */}
@@ -37,8 +40,8 @@ function App() {
                 <Layout />
               </ProtectedRoute>
             }>
-              {/* Planning d'astreinte - accessible à tous les utilisateurs connectés */}
-              <Route path="planning" element={<PlanningAstreinte />} />
+              {/* Ancien emplacement du planning d'astreinte - maintenant déplacé */}
+              {/* <Route path="planning" element={<PlanningAstreinte />} /> */}
 
               {/* Gestion du planning - réservé aux rôles de management */}
               <Route path="planning-management" element={
@@ -70,6 +73,13 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              {/* New Service Management - admin uniquement */}
+              <Route path="service-management" element={
+                <ProtectedRoute requiredRoles={['admin']}>
+                  <ServiceManagement />
+                </ProtectedRoute>
+              } />
+
               {/* Dashboard secteur - admin et chef_secteur */}
               <Route path="secteur-dashboard" element={
                 <ProtectedRoute requiredRoles={['admin', 'chef_secteur']}>
@@ -96,6 +106,19 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              {/* New Chef Secteur Management Routes */}
+              <Route path="chef-secteur-services" element={
+                <ProtectedRoute requiredRoles={['chef_secteur']}>
+                  <ChefSecteurServiceManagement />
+                </ProtectedRoute>
+              } />
+
+              <Route path="chef-secteur-users" element={
+                <ProtectedRoute requiredRoles={['chef_secteur']}>
+                  <ChefSecteurUserManagement />
+                </ProtectedRoute>
+              } />
+
               {/* Routes chef service */}
               <Route path="mon-service" element={
                 <ProtectedRoute requiredRoles={['chef_service']}>
@@ -106,6 +129,13 @@ function App() {
               <Route path="mon-equipe" element={
                 <ProtectedRoute requiredRoles={['chef_service']}>
                   <MonEquipe />
+                </ProtectedRoute>
+              } />
+
+              {/* New Chef Service Management Route */}
+              <Route path="chef-service-users" element={
+                <ProtectedRoute requiredRoles={['chef_service']}>
+                  <ChefServiceUserManagement />
                 </ProtectedRoute>
               } />
 

@@ -3,16 +3,16 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import ContactInfo from './ContactInfo';
 import holidaysService from '@/services/holidays.service';
-import type { Holiday } from '@/services/holidays.service';
+// import type { Holiday } from '@/services/holidays.service';
 import type { UserRole } from '@/types';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CalendarDaysIcon,
-  UserIcon,
-  BuildingOfficeIcon,
-  WrenchScrewdriverIcon,
-  MapIcon,
+  // UserIcon,
+  // BuildingOfficeIcon,
+  // WrenchScrewdriverIcon,
+  // MapIcon,
   ExclamationTriangleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -68,7 +68,7 @@ interface PlanningCalendarProps {
 
 const PlanningCalendar: React.FC<PlanningCalendarProps> = ({ 
   filters, 
-  onFiltersChange, 
+  // onFiltersChange, 
   selectedServiceId,
   showOnlyWithPanne = false 
 }) => {
@@ -111,7 +111,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
         if (date.getDay() === 6) { // Samedi
           mockAssignments.push({
             id: `weekend-${index}-ing`,
-            date: date.toISOString().split('T')[0],
+            date: formatDate(date),
             type: 'ingenieur',
             user: {
               id: `ing-${index}`,
@@ -145,7 +145,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
 
           mockAssignments.push({
             id: `weekend-${index}-collab`,
-            date: date.toISOString().split('T')[0],
+            date: formatDate(date),
             type: 'collaborateur',
             user: {
               id: `collab-${index}`,
@@ -175,7 +175,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
         if (date.getDay() === 0) { // Dimanche
           mockAssignments.push({
             id: `weekend-${index}-ing-dim`,
-            date: date.toISOString().split('T')[0],
+            date: formatDate(date),
             type: 'ingenieur',
             user: {
               id: `ing-dim-${index}`,
@@ -203,7 +203,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
 
           mockAssignments.push({
             id: `weekend-${index}-collab-dim`,
-            date: date.toISOString().split('T')[0],
+            date: formatDate(date),
             type: 'collaborateur',
             user: {
               id: `collab-dim-${index}`,
@@ -271,7 +271,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     // Premier jour du mois
     const firstDay = new Date(year, month, 1);
     // Dernier jour du mois
-    const lastDay = new Date(year, month + 1, 0);
+    // const lastDay = new Date(year, month + 1, 0);
     
     // Premier lundi de la grille (peut être du mois précédent)
     const startDate = new Date(firstDay);
@@ -282,8 +282,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     // Générer 42 jours (6 semaines)
     const days = [];
     for (let i = 0; i < 42; i++) {
-      const day = new Date(startDate);
-      day.setDate(startDate.getDate() + i);
+      const day = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       days.push(day);
     }
     
@@ -291,7 +290,11 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    // Use a more reliable date formatting method that avoids timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getAssignmentsForDate = (date: Date) => {
@@ -306,7 +309,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   };
 
   const monthDays = getMonthDays(currentMonth);
-  const dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+  // const dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
   const shortDayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   const currentMonthName = currentMonth.toLocaleDateString('fr-FR', { 
@@ -363,7 +366,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
       <Card.Body>
         <div className="grid grid-cols-7 gap-1">
           {/* En-têtes des jours */}
-          {shortDayNames.map((day, index) => (
+          {shortDayNames.map((day) => (
             <div key={day} className="p-3 text-center text-sm font-medium text-gray-500 border-b bg-gray-50">
               {day}
             </div>
@@ -409,7 +412,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                       🇲🇦 {holiday.name.length > 15 ? holiday.name.substring(0, 15) + '...' : holiday.name}
                     </div>
                   )}
-                  {isWeekend && !hasAstreinte && !holiday && isCurrentMonth && (
+                  {(isWeekend || holiday) && !hasAstreinte && isCurrentMonth && (
                     <div className="text-xs text-gray-400 mt-1">Pas d'astreinte</div>
                   )}
                 </div>

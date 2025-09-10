@@ -195,3 +195,15 @@ app.listen(PORT, () => {
   console.log(`🧪 Test panne creation: curl -X POST http://localhost:${PORT}/api/pannes -H "Content-Type: application/json" -d '{"titre":"Test","description":"Test description"}'`);
 });
 
+
+
+
+
+
+
+
+
+
+
+
+

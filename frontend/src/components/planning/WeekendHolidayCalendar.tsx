@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import weekendHolidayService from '@/services/weekend-holiday.service';
 import type { WeekendHolidayPlanning } from '@/services/weekend-holiday.service';
 import {
-  CalendarDaysIcon,
-  ClockIcon,
+  // CalendarDaysIcon,
+  // ClockIcon,
   UserIcon,
   PhoneIcon,
   EnvelopeIcon,
@@ -22,8 +22,8 @@ interface WeekendHolidayCalendarProps {
 
 const WeekendHolidayCalendar: React.FC<WeekendHolidayCalendarProps> = ({
   secteurId,
-  startDate,
-  endDate
+  // startDate,
+  // endDate
 }) => {
   const [plannings, setPlannings] = useState<WeekendHolidayPlanning[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,10 +31,10 @@ const WeekendHolidayCalendar: React.FC<WeekendHolidayCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Stabiliser les bornes de période pour éviter des re-renders infinis
-  const stableStartRef = useRef<Date>(startDate ?? new Date());
-  const stableEndRef = useRef<Date>(
-    endDate ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-  );
+  // const stableStartRef = useRef<Date>(startDate ?? new Date());
+  // const stableEndRef = useRef<Date>(
+  //   endDate ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+  // );
 
   useEffect(() => {
     // Éviter les appels si aucun secteur n'est fourni (préviens boucles)

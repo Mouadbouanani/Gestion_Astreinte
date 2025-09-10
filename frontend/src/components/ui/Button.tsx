@@ -2,7 +2,7 @@ import React from 'react';
 import { clsx } from 'clsx';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -30,6 +30,7 @@ const Button: React.FC<ButtonProps> = ({
     warning: 'btn-warning',
     error: 'btn-error',
     ghost: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
+    outline: 'btn-outline',
   };
 
   const sizeClasses = {

@@ -51,6 +51,12 @@ const Sidebar: React.FC = () => {
         roles: ['admin'],
       },
       {
+        name: 'Gestion Services',
+        href: '/service-management',
+        icon: WrenchScrewdriverIcon,
+        roles: ['admin'],
+      },
+      {
         name: 'Utilisateurs',
         href: '/users',
         icon: UserGroupIcon,
@@ -72,6 +78,18 @@ const Sidebar: React.FC = () => {
         roles: ['chef_secteur'],
       },
       {
+        name: 'Gestion Services',
+        href: '/chef-secteur-services',
+        icon: WrenchScrewdriverIcon,
+        roles: ['chef_secteur'],
+      },
+      {
+        name: 'Gestion Utilisateurs',
+        href: '/chef-secteur-users',
+        icon: UserGroupIcon,
+        roles: ['chef_secteur'],
+      },
+      {
         name: 'Mon Service',
         href: '/mon-service',
         icon: WrenchScrewdriverIcon,
@@ -80,6 +98,12 @@ const Sidebar: React.FC = () => {
       {
         name: 'Mon Équipe',
         href: '/mon-equipe',
+        icon: UserGroupIcon,
+        roles: ['chef_service'],
+      },
+      {
+        name: 'Gestion Utilisateurs',
+        href: '/chef-service-users',
         icon: UserGroupIcon,
         roles: ['chef_service'],
       },
@@ -147,7 +171,7 @@ const Sidebar: React.FC = () => {
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 bg-ocp-primary rounded-full flex items-center justify-center">
             <span className="text-white font-medium text-sm">
-              {user.firstName[0]}{user.lastName[0]}
+              {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -161,13 +185,13 @@ const Sidebar: React.FC = () => {
         {/* Informations de périmètre */}
         <div className="mt-3 text-xs text-gray-500 space-y-1">
           {user.site && (
-            <div> {user.site.name}</div>
+            <div> {typeof user.site === 'object' ? user.site.name : user.site}</div>
           )}
           {user.secteur && (
-            <div> {user.secteur.name}</div>
+            <div> {typeof user.secteur === 'object' ? user.secteur.name : user.secteur}</div>
           )}
           {user.service && (
-            <div> {user.service.name}</div>
+            <div> {typeof user.service === 'object' ? user.service.name : user.service}</div>
           )}
         </div>
       </div>

@@ -15,7 +15,7 @@ interface SidebarToggleProps {
 const SidebarToggle: React.FC<SidebarToggleProps> = ({
   isOpen,
   onToggle,
-  position = 'left',
+  // position = 'left',
   variant = 'ghost',
   size = 'md',
   className = '',

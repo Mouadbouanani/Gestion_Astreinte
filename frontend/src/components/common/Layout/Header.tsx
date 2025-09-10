@@ -100,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, onSidebarToggle }) => {
           >
             <div className="h-8 w-8 bg-ocp-primary rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
               </span>
             </div>
             <div className="hidden md:block text-left">

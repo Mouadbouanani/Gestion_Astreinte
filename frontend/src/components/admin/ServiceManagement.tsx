@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Settings } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiService } from '../../services/api';
-import { Service, Secteur, User } from '../../types';
+import type { Service, Secteur, User } from '../../types';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
@@ -11,7 +11,7 @@ interface ServiceFormData {
   code: string;
   description: string;
   secteur: string;
-  chefService: string;
+  chefService: string | undefined;
 }
 
 const ServiceManagement: React.FC = () => {
@@ -37,8 +37,8 @@ const ServiceManagement: React.FC = () => {
     try {
       setLoading(true);
       const [servicesRes, secteursRes, usersRes] = await Promise.all([
-        apiService.getServices(),
-        apiService.getSecteurs(),
+        apiService.getAllServices(),
+        apiService.getAllSecteurs(),
         apiService.getUsers()
       ]);
 
@@ -67,14 +67,19 @@ const ServiceManagement: React.FC = () => {
         code: formData.code.trim().toUpperCase(),
         description: formData.description.trim(),
         secteur: formData.secteur,
-        chefService: formData.chefService || null
+        chefService: formData.chefService || undefined,
+        minPersonnel: 1 // Default minimum personnel
       };
 
       let response;
       if (editingService) {
-        response = await apiService.updateService(editingService._id, payload);
+        const siteId = typeof editingService.secteur === 'object' ? (typeof editingService.secteur.site === 'object' ? editingService.secteur.site._id : editingService.secteur.site) : '';
+        const secteurId = typeof editingService.secteur === 'object' ? editingService.secteur._id : editingService.secteur;
+        response = await apiService.updateService(siteId, secteurId, editingService._id, payload);
       } else {
-        response = await apiService.createService(payload);
+        const siteId = ''; // Will need to be provided from form
+        const secteurId = payload.secteur;
+        response = await apiService.createService(siteId, secteurId, payload);
       }
 
       if (response.success) {
@@ -98,7 +103,7 @@ const ServiceManagement: React.FC = () => {
       code: service.code,
       description: service.description || '',
       secteur: typeof service.secteur === 'object' ? service.secteur._id : service.secteur,
-      chefService: typeof service.chefService === 'object' ? service.chefService._id : service.chefService || ''
+      chefService: typeof service.chefService === 'object' ? service.chefService._id : service.chefService || undefined
     });
     setShowModal(true);
   };
@@ -109,7 +114,9 @@ const ServiceManagement: React.FC = () => {
     }
 
     try {
-      const response = await apiService.deleteService(service._id);
+      const siteId = typeof service.secteur === 'object' ? (typeof service.secteur.site === 'object' ? service.secteur.site._id : service.secteur.site) : '';
+      const secteurId = typeof service.secteur === 'object' ? service.secteur._id : service.secteur;
+      const response = await apiService.deleteService(siteId, secteurId, service._id);
       if (response.success) {
         toast.success('Service supprimé');
         fetchData();

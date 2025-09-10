@@ -76,6 +76,12 @@ export interface Secteur {
       collaborateurs: number;
     };
   };
+  // Remove the contact property since it's not defined in the interface
+  // contact?: {
+  //   email?: string;
+  //   phone?: string;
+  //   address?: string;
+  // };
   createdAt: string;
   updatedAt: string;
 }
@@ -266,4 +272,116 @@ export interface FilterOptions {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+}
+
+// Planning types
+export interface Planning {
+  _id: string;
+  user: string | User;
+  date: string;
+  shift: 'day' | 'night';
+  type: 'astreinte' | 'garde' | 'planning';
+  status: 'assigned' | 'available' | 'unavailable';
+  secteur?: string | Secteur;
+  service?: string | Service;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Escalade types
+export interface Escalade {
+  _id: string;
+  niveau: EscaladeNiveau;
+  panne: string;
+  secteur: string | Secteur;
+  service: string | Service;
+  user: string | User;
+  status: 'pending' | 'in_progress' | 'resolved' | 'cancelled';
+  startTime: string;
+  endTime?: string;
+  responseTime?: number;
+  resolution?: string;
+  niveaux: EscaladeNiveauData[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EscaladeNiveauData {
+  niveau: EscaladeNiveau;
+  user: string | User;
+  startTime: string;
+  endTime?: string;
+  responseTime?: number;
+  status: 'pending' | 'contacted' | 'responded' | 'escalated';
+}
+
+export type EscaladeNiveau = 1 | 2 | 3;
+
+export interface CreateEscaladeForm {
+  panne: string;
+  secteur: string;
+  service: string;
+  niveau: EscaladeNiveau;
+  description?: string;
+}
+
+export interface EscaladeFilters {
+  niveau?: EscaladeNiveau;
+  status?: string;
+  secteur?: string;
+  service?: string;
+  user?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+// Panne types
+export interface Panne {
+  _id: string;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  secteur: string | Secteur;
+  service?: string | Service;
+  reportedBy: string | User;
+  assignedTo?: string | User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NouvellePanne {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  secteur: string;
+  service?: string;
+}
+
+// Weekend/Holiday types
+export interface WeekendHolidayStats {
+  totalWeekends: number;
+  totalHolidays: number;
+  assignedWeekends: number;
+  assignedHolidays: number;
+  availableWeekends: number;
+  availableHolidays: number;
+}
+
+// Extended types for statistics
+export interface SecteurWithStats extends Secteur {
+  statistics: {
+    servicesCount: number;
+    usersCount: number;
+    totalServices: number;
+    totalUsers: number;
+    activeServices: number;
+    tauxParticipation: number;
+    usersByRole: {
+      chefSecteur: number;
+      ingenieurs: number;
+      chefsService: number;
+      collaborateurs: number;
+    };
+  };
 }

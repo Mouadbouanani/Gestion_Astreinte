@@ -15,7 +15,7 @@ const router = express.Router();
 // ========================================
 
 // Get all secteurs (for admin)
-router.get('/secteurs', async (req, res) => {
+router.get('/secteurs', flexibleAuth, async (req, res) => {
   try {
     const { siteId } = req.query;
     let filter = { isActive: true };
@@ -46,7 +46,7 @@ router.get('/secteurs', async (req, res) => {
 });
 
 // Get secteurs by site name (alternative endpoint for backward compatibility)
-router.get('/sites/by-name/:siteName/secteurs', async (req, res) => {
+router.get('/sites/by-name/:siteName/secteurs', flexibleAuth, async (req, res) => {
   try {
     const { siteName } = req.params;
 
@@ -90,7 +90,7 @@ router.get('/sites/by-name/:siteName/secteurs', async (req, res) => {
 });
 
 // Get secteurs by site
-router.get('/sites/:siteId/secteurs', async (req, res) => {
+router.get('/sites/:siteId/secteurs', flexibleAuth, async (req, res) => {
   try {
     const { siteId } = req.params;
 
@@ -161,7 +161,7 @@ router.get('/sites/:siteId/secteurs', async (req, res) => {
 });
 
 // Get single secteur with details
-router.get('sites/:siteId/secteurs/:id', async (req, res) => {
+router.get('/sites/:siteId/secteurs/:id', flexibleAuth, async (req, res) => {
   try {
      const { siteId } = req.params;
 
@@ -243,7 +243,7 @@ router.get('sites/:siteId/secteurs/:id', async (req, res) => {
 });
 
 // If you want to allow custom secteur names, modify your backend:
-router.post('/sites/:siteId/secteurs', async (req, res) => {
+router.post('/sites/:siteId/secteurs', flexibleAuth, async (req, res) => {
   try {
     const { siteId } = req.params;
     const { name, code, description } = req.body; // Add description support
@@ -701,7 +701,7 @@ router.get('/services', async (req, res) => {
 });
 
 // Get services by secteur name (alternative endpoint for backward compatibility)
-router.get('/secteurs/by-name/:secteurName/services', async (req, res) => {
+router.get('/secteurs/by-name/:secteurName/services', flexibleAuth, async (req, res) => {
   try {
     const { secteurName } = req.params;
 
@@ -742,7 +742,7 @@ router.get('/secteurs/by-name/:secteurName/services', async (req, res) => {
 });
 
 // Get services by secteur
-router.get('/secteurs/:secteurId/services', async (req, res) => {
+router.get('/secteurs/:secteurId/services', flexibleAuth, async (req, res) => {
   try {
     const { secteurId } = req.params;
 
@@ -1398,7 +1398,7 @@ router.delete('/services/:id', authenticateToken, smartAuthorization(['admin']),
 // ========================================
 
 // Get services for a specific secteur in a specific site
-router.get('/sites/:siteId/secteurs/:secteurId/services', async (req, res) => {
+router.get('/sites/:siteId/secteurs/:secteurId/services', flexibleAuth, async (req, res) => {
   try {
     const { siteId, secteurId } = req.params;
 
